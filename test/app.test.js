@@ -104,7 +104,7 @@ describe("OAuth consent needs the approval password", () => {
   const redirect = "https://claude.ai/api/mcp/auth_callback";
   const verifier = "v".repeat(50);
   const challenge = createHash("sha256").update(verifier).digest("base64url");
-  let clientId;
+  let clientId, clientSecret;
 
   beforeAll(async () => {
     const res = await fetch(`${base}/oauth/register`, {
@@ -112,7 +112,7 @@ describe("OAuth consent needs the approval password", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ redirect_uris: [redirect], client_name: "test" }),
     });
-    clientId = (await res.json()).client_id;
+    ({ client_id: clientId, client_secret: clientSecret } = await res.json());
   });
 
   const approve = (extra) =>
@@ -136,12 +136,59 @@ describe("OAuth consent needs the approval password", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  test("approving with the password redirects with a code", async () => {
+  test("a wrong approval password issues no code", async () => {
+    const res = await approve({ password: "guess" });
+    expect(res.status).toBe(403);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  test("the approved code buys a bearer token that works on /mcp", async () => {
     const res = await approve({ password: APPROVAL });
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toMatch(
-      /^https:\/\/claude\.ai\/api\/mcp\/auth_callback\?code=/,
-    );
+    const location = new URL(res.headers.get("location"));
+    expect(`${location.origin}${location.pathname}`).toBe(redirect);
+    const tokenRes = await fetch(`${base}/oauth/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: location.searchParams.get("code"),
+        redirect_uri: redirect,
+        client_id: clientId,
+        client_secret: clientSecret,
+        code_verifier: verifier,
+      }),
+    });
+    expect(tokenRes.status).toBe(200);
+    const { access_token } = await tokenRes.json();
+    const call = (token) =>
+      rpc(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "list_weeks", arguments: {} },
+        },
+        { authorization: `Bearer ${token}` },
+      );
+    const ok = await call(access_token);
+    expect(ok.status).toBe(200);
+    expect((await rpcResult(ok)).result.content[0].text).toMatch(/2026-10-12/);
+    expect((await call("not-a-real-token")).status).toBe(401);
+  });
+});
+
+describe("errors", () => {
+  test("malformed JSON gets a plain 400, never a stack trace", async () => {
+    const res = await fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": KEY },
+      body: "{bad",
+    });
+    expect(res.status).toBe(400);
+    const text = await res.text();
+    expect(JSON.parse(text)).toEqual({ error: "Bad request" });
+    expect(text).not.toMatch(/node_modules|at /);
   });
 });
 

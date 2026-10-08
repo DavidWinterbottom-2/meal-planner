@@ -324,3 +324,95 @@ describe("formatWeekText", () => {
     );
   });
 });
+
+describe("review follow-ups", () => {
+  test("image_only weeks are flagged in the bundle and its summary", async () => {
+    store.db
+      .prepare(
+        "UPDATE week SET status = 'image_only' WHERE week_start = '2026-10-05'",
+      )
+      .run();
+    const { data, text } = await call("get_planning_context");
+    expect(data.image_only_weeks).toEqual(["2026-10-05"]);
+    expect(text).toMatch(
+      /Image-only weeks needing transcription: 2026-10-05\./,
+    );
+  });
+
+  test("weeks_back defaults to 6 and is bounded to 1–26", async () => {
+    for (let i = 1; i <= 8; i++) {
+      const monday = new Date(Date.UTC(2026, 8, 28 - 7 * i))
+        .toISOString()
+        .slice(0, 10);
+      store.saveWeek({ week_start: monday, source: "David", days: [] }, "t");
+    }
+    expect((await call("get_planning_context")).data.recent_weeks).toHaveLength(
+      6,
+    );
+    expect(
+      (await call("get_planning_context", { weeks_back: 0 })).isError,
+    ).toBe(true);
+    expect(
+      (await call("get_planning_context", { weeks_back: 27 })).isError,
+    ).toBe(true);
+  });
+
+  test("tools resolve 'current' in Zurich time, not UTC", async () => {
+    await client.close();
+    const server = createMcpServer({
+      store,
+      loadRules: allRules,
+      now: () => new Date("2026-10-18T23:30:00Z"), // already Monday 19 Oct in Zurich
+    });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await server.connect(a);
+    client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    expect(
+      (await call("get_week_plan", { week: "current" })).data.week_start,
+    ).toBe("2026-10-19");
+    expect((await call("get_planning_context")).data.current_week).toBe(
+      "2026-10-19",
+    );
+  });
+
+  test("explicit nulls fall back to defaults instead of erroring", async () => {
+    expect((await call("get_week_plan", { week: null })).data.week_start).toBe(
+      "2026-10-12",
+    );
+    expect(
+      (await call("list_weeks", { from: null, to: null })).data,
+    ).toHaveLength(2);
+    expect(
+      (await call("get_planning_context", { weeks_back: null })).isError,
+    ).toBe(false);
+    const saved = await call("save_week_plan", {
+      week_start: "2026-10-19",
+      source: null,
+      days: [],
+      prep: null,
+    });
+    expect(saved.data.source).toBe("David");
+  });
+
+  test("update_day with null fields leaves them unchanged", async () => {
+    const { data } = await call("update_day", {
+      date: "2026-10-15",
+      fields: { dinner: "Pizza", note: null },
+    });
+    expect(data).toMatchObject({ dinner: "Pizza", note: "Cleaner 1:30–5pm" });
+  });
+
+  test("over-long text and more than 7 days are rejected", async () => {
+    const long = await call("update_day", {
+      date: "2026-10-15",
+      fields: { dinner: "x".repeat(501) },
+    });
+    expect(long.isError).toBe(true);
+    const days = Array.from({ length: 8 }, () => ({ date: "2026-10-19" }));
+    expect(
+      (await call("save_week_plan", { week_start: "2026-10-19", days }))
+        .isError,
+    ).toBe(true);
+  });
+});

@@ -304,3 +304,96 @@ describe("seedIfEmpty", () => {
       expect(() => store.saveWeek(week, T1)).not.toThrow();
   });
 });
+
+describe("review follow-ups", () => {
+  test("seeding is blocked by any existing week, not just the seed weeks", () => {
+    store.saveWeek(plan({ week_start: "2026-11-02", days: [] }), T1);
+    expect(seedIfEmpty(store, T2)).toBe(0);
+    expect(store.listWeeks().map((w) => w.week_start)).toEqual(["2026-11-02"]);
+  });
+
+  test("deleting every week never brings the seed examples back", () => {
+    seedIfEmpty(store, T1);
+    store.deleteWeek("2026-10-05", T2);
+    store.deleteWeek("2026-10-12", T2);
+    expect(seedIfEmpty(store, T3)).toBe(0);
+    expect(store.listWeeks()).toEqual([]);
+  });
+
+  test("seeded state survives reopening the database file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "meals-"));
+    try {
+      const path = join(dir, "meals.db");
+      const a = openStore(path);
+      seedIfEmpty(a, T1);
+      a.close();
+      const b = openStore(path);
+      expect(seedIfEmpty(b, T2)).toBe(0);
+      expect(b.listWeeks()).toHaveLength(2);
+      b.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("the database itself refuses to modify or delete history rows", () => {
+    store.saveWeek(plan(), T1);
+    expect(() =>
+      store.db.prepare("UPDATE history SET kind = 'create'").run(),
+    ).toThrow(/append-only/);
+    expect(() => store.db.prepare("DELETE FROM history").run()).toThrow(
+      /append-only/,
+    );
+  });
+
+  test("every earlier history row is unchanged after later writes and undos", () => {
+    store.saveWeek(plan(), T1);
+    store.updateDay("2026-10-15", { dinner: "Pizza" }, T2);
+    const prefix = history();
+    store.saveWeek(plan({ days: [] }), T3);
+    store.deleteWeek("2026-10-12", T3);
+    store.undoLastChange(T3);
+    store.undoLastChange(T3);
+    expect(history().slice(0, prefix.length)).toEqual(prefix);
+  });
+
+  test("a change made after an undo is the next thing undone", () => {
+    store.saveWeek(plan(), T1); // A
+    store.undoLastChange(T2); // undo A
+    store.saveWeek(plan({ week_start: "2026-10-19", days: [] }), T3); // B
+    expect(store.undoLastChange(T3)).toMatchObject({
+      week_start: "2026-10-19",
+      undid: "create",
+    });
+    expect(store.getWeek("2026-10-12")).toBeNull();
+    expect(store.undoLastChange(T3)).toBeNull();
+  });
+
+  test("update_day treats null as not given and only an empty string clears", () => {
+    store.saveWeek(plan(), T1);
+    const day = store.updateDay(
+      "2026-10-15",
+      { lunch: "Rösti", dinner: null, note: undefined },
+      T2,
+    );
+    expect(day).toMatchObject({
+      lunch: "Rösti",
+      dinner: "Prawn ramen",
+      note: "Cleaner 1:30–5pm",
+    });
+    expect(() => store.updateDay("2026-10-15", { dinner: null }, T2)).toThrow(
+      /no fields to update/,
+    );
+  });
+
+  test("listWeeks bounds are inclusive at both ends", () => {
+    store.saveWeek(plan({ week_start: "2026-10-05", days: [] }), T1);
+    store.saveWeek(plan(), T1);
+    expect(
+      store
+        .listWeeks({ from: "2026-10-12", to: "2026-10-12" })
+        .map((w) => w.week_start),
+    ).toEqual(["2026-10-12"]);
+    expect(store.listWeeks({ from: "2026-10-05" })).toHaveLength(2);
+  });
+});

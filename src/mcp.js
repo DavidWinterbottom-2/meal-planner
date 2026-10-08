@@ -11,23 +11,37 @@ import {
 } from "./domain/dates.js";
 import { RULE_SECTIONS } from "./flatnotes.js";
 
-const DATE = z.string().describe("A date in YYYY-MM-DD format");
+const DATE = z.string().max(10).describe("A date in YYYY-MM-DD format");
 const MONDAY = z
   .string()
   .describe("The Monday that starts the week, YYYY-MM-DD");
 
+// Generous limits on free text: a toddler's lunch never needs 500 characters.
+const TEXT_MAX = 500;
+const LONG_TEXT_MAX = 5000;
+
 const dayFields = {
-  morning_snack: z.string().nullish().describe("Morning snack"),
+  morning_snack: z.string().max(TEXT_MAX).nullish().describe("Morning snack"),
   lunch: z
     .string()
+    .max(TEXT_MAX)
     .nullish()
     .describe(
       'Lunch. Mon–Wed is usually the literal "Kita" (Thomas eats there).',
     ),
-  afternoon_snack: z.string().nullish().describe("Afternoon snack"),
-  dinner: z.string().nullish().describe("Dinner, the main meal of the day"),
+  afternoon_snack: z
+    .string()
+    .max(TEXT_MAX)
+    .nullish()
+    .describe("Afternoon snack"),
+  dinner: z
+    .string()
+    .max(TEXT_MAX)
+    .nullish()
+    .describe("Dinner, the main meal of the day"),
   note: z
     .string()
+    .max(TEXT_MAX)
     .nullish()
     .describe("Short note for the day, e.g. who is out, appointments"),
 };
@@ -35,7 +49,7 @@ const dayFields = {
 const PLANNING_CONTEXT_DESCRIPTION = [
   "ALWAYS call this first whenever planning meals (e.g. 'plan the next 2 weeks'), before drafting anything.",
   "Returns, in one bundle: the household rules, meal bank, recipes and pantry (markdown, from Flatnotes);",
-  "the most recent planned weeks up to this week, in full, so new plans build on what we ate recently;",
+  "the most recent stored weeks up to and including this week (weeks_back of them, default 6), in full, so new plans build on what we ate recently;",
   "any weeks already planned after this week; weeks that are only an image (status image_only) and need",
   "transcribing; and the next Monday with no plan yet.",
   "Then check the Cozi calendar for the planning window, draft the plan in chat, iterate with David,",
@@ -142,8 +156,10 @@ export function createMcpServer({ store, loadRules, now = () => new Date() }) {
           .int()
           .min(1)
           .max(26)
-          .default(6)
-          .describe("How many recent weeks to include"),
+          .nullish()
+          .describe(
+            "How many stored weeks up to and including this week to return in full (default 6)",
+          ),
       },
     },
     guarded(async ({ weeks_back }) => {
@@ -177,19 +193,23 @@ export function createMcpServer({ store, loadRules, now = () => new Date() }) {
         week_start: MONDAY,
         source: z
           .string()
-          .default("David")
+          .max(100)
+          .nullish()
           .describe('Who made the plan: "David", "Lisa", or free text'),
         days: z
           .array(z.object({ date: DATE, ...dayFields }))
+          .max(7)
           .describe(
             "The days of the week that have content; omitted days are left empty",
           ),
         prep: z
           .string()
+          .max(LONG_TEXT_MAX)
           .nullish()
           .describe("Prep / batch-cook tasks for the week (markdown)"),
         notes: z
           .string()
+          .max(LONG_TEXT_MAX)
           .nullish()
           .describe("Any other notes for the week (markdown)"),
       },
@@ -206,7 +226,7 @@ export function createMcpServer({ store, loadRules, now = () => new Date() }) {
       title: "Update one day",
       description:
         "Change some fields of a single day in an already-planned week, leaving everything else as it is. " +
-        "Pass an empty string to clear a field.",
+        "Pass an empty string to clear a field; fields that are omitted or null are left unchanged.",
       inputSchema: {
         date: DATE,
         fields: z.object(dayFields).describe("Only the fields to change"),
@@ -228,7 +248,8 @@ export function createMcpServer({ store, loadRules, now = () => new Date() }) {
       inputSchema: {
         week: z
           .string()
-          .default("current")
+          .max(10)
+          .nullish()
           .describe('A Monday (YYYY-MM-DD) or "current" / "next" / "previous"'),
       },
     },
@@ -250,18 +271,22 @@ export function createMcpServer({ store, loadRules, now = () => new Date() }) {
     {
       title: "List weeks",
       description:
-        "List planned weeks, newest first, with source, status and a one-line dinner summary.",
+        "List planned weeks, newest first, with source, status and a one-line dinner summary. " +
+        "from/to are compared with each week's Monday (week_start), inclusive.",
       inputSchema: {
-        from: DATE.optional().describe(
+        from: DATE.nullish().describe(
           "Earliest week_start to include (YYYY-MM-DD)",
         ),
-        to: DATE.optional().describe(
+        to: DATE.nullish().describe(
           "Latest week_start to include (YYYY-MM-DD)",
         ),
       },
     },
     guarded(async ({ from, to }) => {
-      const weeks = store.listWeeks({ from, to });
+      const weeks = store.listWeeks({
+        from: from ?? undefined,
+        to: to ?? undefined,
+      });
       const lines = weeks.map(
         (w) =>
           `- ${w.week_start} (${w.source}, ${w.status}): ${w.dinner_summary}`,

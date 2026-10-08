@@ -49,6 +49,11 @@ CREATE TABLE history (
   undoes_id   INTEGER REFERENCES history(id),
   at          TEXT NOT NULL
 );
+-- History is append-only: refuse any change to a row once written.
+CREATE TRIGGER history_no_update BEFORE UPDATE ON history
+BEGIN SELECT RAISE(ABORT, 'history is append-only'); END;
+CREATE TRIGGER history_no_delete BEFORE DELETE ON history
+BEGIN SELECT RAISE(ABORT, 'history is append-only'); END;
 `;
 
 export class NotFoundError extends Error {}
@@ -82,6 +87,7 @@ export function openStore(path = ":memory:") {
       "SELECT id, week_start, kind, before_json, undoes_id FROM history",
     ),
     weekCount: db.prepare("SELECT count(*) AS n FROM week"),
+    historyCount: db.prepare("SELECT count(*) AS n FROM history"),
     weekStarts: db.prepare("SELECT week_start FROM week"),
   };
 
@@ -143,7 +149,14 @@ export function openStore(path = ":memory:") {
       throw new NotFoundError(
         `the week of ${weekStart} has no plan; save it with save_week_plan first`,
       );
-    const changes = cleanDayFields(fields);
+    // null/undefined mean "not given" (some clients send null for every
+    // optional field); only an empty string clears a field.
+    const given = Object.fromEntries(
+      Object.entries(fields ?? {}).filter(
+        ([, v]) => v !== null && v !== undefined,
+      ),
+    );
+    const changes = cleanDayFields(given);
     if (Object.keys(changes).length === 0) {
       throw new Error(
         `no fields to update; use any of ${DAY_FIELDS.join(", ")}`,
@@ -232,7 +245,9 @@ export function openStore(path = ":memory:") {
       return monday;
     },
 
-    isEmpty: () => q.weekCount.get().n === 0,
+    // True only for a database that has never held a week, so deleting every
+    // week never brings the seed examples back.
+    isPristine: () => q.weekCount.get().n === 0 && q.historyCount.get().n === 0,
     close: () => db.close(),
   };
 }

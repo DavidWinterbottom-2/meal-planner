@@ -13,9 +13,11 @@ export function createApp({
   now = () => new Date(),
 }) {
   const app = express();
-  // Apache on the same host forwards requests; trust it for req.ip (used by
-  // the OAuth module's rate limits and audit log), and nothing further out.
-  app.set("trust proxy", "loopback, uniquelocal");
+  // Exactly one proxy (the Pi's Apache) sits in front, so req.ip is the
+  // address Apache appended to X-Forwarded-For. Used by the OAuth module's
+  // rate limits and audit log. The app port must be reachable only by Apache,
+  // or a direct caller could set that header itself.
+  app.set("trust proxy", 1);
   app.disable("x-powered-by");
   app.use(express.json({ limit: "256kb" }));
   app.use(express.urlencoded({ extended: false, limit: "16kb" }));
@@ -54,6 +56,20 @@ export function createApp({
         });
       }
     }
+  });
+
+  // Last resort: never send framework stack traces (malformed JSON bodies
+  // land here before any auth check).
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, _req, res, _next) => {
+    const status =
+      Number.isInteger(err.status) && err.status >= 400 && err.status < 500
+        ? err.status
+        : 500;
+    if (status === 500) console.error("Unhandled error:", err);
+    res
+      .status(status)
+      .json({ error: status === 500 ? "Internal error" : "Bad request" });
   });
 
   return app;

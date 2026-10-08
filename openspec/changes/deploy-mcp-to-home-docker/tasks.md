@@ -7,12 +7,14 @@
 ## 2. Image (meal-planner repo)
 
 - [ ] 2.1 Add a multi-stage `Dockerfile` (node:22-bookworm-slim, `npm ci --omit=dev`, non-root, HEALTHCHECK on `/health`) and `.dockerignore`. Verify that `docker build` succeeds and that `docker run` with dummy env answers `/health` 200, or with no Docker daemon, run the same check in CI
+- [ ] 2.1a Set `NODE_ENV=production` in the image, so Express never returns stack traces (security review of change 1, finding 2; the app also has its own generic error handler). Verify that `docker run` with the image and `curl -d '{bad' -H 'content-type: application/json' /mcp` returns `{"error":"Bad request"}`
 - [ ] 2.2 Add `.github/workflows/build.yml` (QEMU, buildx, `linux/arm64`, push on `main`, tags `latest` plus the version). Verify a green run and that the image appears in GHCR
 - [ ] 2.3 Document image build and deploy in the README. Verify that the links to the docker-infra service README resolve
 
 ## 3. docker-infra service (docker-infra repo, separate PR)
 
 - [ ] 3.1 Use the `new-service-checklist` skill to add `home-docker/services/meal-planner/` with `docker-compose.yml` (port 8099, `/data` volume, docker-infra network, `TZ=Europe/Zurich`), `.env.example`, `Makefile` (via `mcp-common.mk` if it fits) and `README.md`. Verify `make config` / `docker compose config` parses
+- [ ] 3.1a Make the app port reachable **only from Apache** (security review of change 1, finding 1). The app trusts exactly one proxy hop for `req.ip`, so a direct caller could forge `X-Forwarded-For` and dodge the OAuth approval rate limit. Either publish 8099 only on the Docker bridge (`172.17.0.1:8099:3000`, which `host.docker.internal` resolves to), or don't publish it and proxy Apache to `http://meal-planner:3000` over the `docker-infra` network. Confirm that Apache's `ProxyPass` appends `X-Forwarded-For` (its default). Verify that `curl http://<pi-lan-ip>:8099/health` from another LAN machine fails, and that the public `/meals/health` still answers
 - [ ] 3.2 Add the Apache lines to the `mcp.winterbottom.xyz` vhost (well-known OAuth path plus `/meals/` ProxyPass and ProxyPassReverse). Verify that `httpd -t` passes
 - [ ] 3.3 Register `"home-docker/meal-planner": {"scope":"public","match":"/meals/mcp","auth":"mcp"}` in `scripts/tools-index.json`, add a card to the public tools page, and update the home-docker README. Verify that `check-tools-index.py`, `check-service-docs.py` and `check-hosting-security.py` pass locally and in CI
 

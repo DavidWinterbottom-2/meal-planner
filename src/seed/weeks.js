@@ -117,10 +117,10 @@ export const SEED_WEEKS = [
   },
 ];
 
-// Seed only into an empty database, through the store so the seeds appear in
+// Seed only into a database that has never held a week, through the store so the seeds appear in
 // history like any other save. Returns the number of weeks seeded.
 export function seedIfEmpty(store, at, weeks = SEED_WEEKS) {
-  if (!store.isEmpty()) return 0;
+  if (!store.isPristine()) return 0;
   for (const week of weeks) store.saveWeek(week, at);
   return weeks.length;
 }
