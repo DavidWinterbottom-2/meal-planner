@@ -53,3 +53,5 @@ jobs:
           node-version: "22"
       - run: npm ci
       - run: npm test
+      # The vendored OAuth module keeps its own node:test suite (src/vendor/README.md).
+      - run: npm run test:vendor

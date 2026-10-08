@@ -5,3 +5,5 @@ coverage/
 .claude/skills/
 .github/prompts/
 .github/skills/
+# Vendored verbatim from mcp-development/shared — must stay byte-identical.
+src/vendor/
