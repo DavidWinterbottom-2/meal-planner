@@ -1,0 +1,7 @@
+# Generated or synced — not hand-edited here, so not formatted here.
+coverage/
+.copier-answers.yml
+.claude/commands/opsx/
+.claude/skills/
+.github/prompts/
+.github/skills/

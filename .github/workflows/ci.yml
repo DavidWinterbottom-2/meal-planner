@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  # §2: every PR must bump the version in its single source of truth, or this
+  # fails the PR. Unconditional on purpose (see the version-bump-check skill) —
+  # no path filter guessing which PRs "ship", since over-bumping a docs/CI-only
+  # PR is harmless (images deploy by SHA) but a missed real bump isn't.
+  version-bumped:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fail if the version wasn't bumped
+        run: |
+          base="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1
+
+          new=$(jq -r .version package.json)
+          old=$(git show "$base:package.json" | jq -r .version)
+
+          echo "old=$old new=$new"
+          if [ "$old" = "$new" ]; then
+            echo "::error::version not bumped ($new). Bump it with your stack's tool." && exit 1
+          fi
+
+  # §10: lint + format-check every file. Runs in check mode so an unformatted or
+  # lint-failing file fails the PR rather than being reformatted behind your back.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run lint
+
+  # §4: run the tests and enforce the >=80% coverage floor. The gate fails the PR
+  # when coverage drops below 80% — it is not merely reported.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm test

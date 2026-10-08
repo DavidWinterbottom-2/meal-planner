@@ -1,0 +1,23 @@
+schema: spec-driven
+
+context: |
+  Meal Planner: single-user family meal planner for David (winterbottom.xyz).
+  Two surfaces in ONE Node container: a phone web viewer (meals.winterbottom.xyz,
+  Entra OIDC login, David only, 1-year session) and an MCP server
+  (mcp.winterbottom.xyz/meals/mcp, shared OAuth2 module vendored from
+  mcp-development/shared + x-api-key) used by Claude in claude.ai.
+  Stack: Node 22, ES modules, Express, better-sqlite3, @modelcontextprotocol/sdk,
+  zod, server-rendered HTML, vitest (>=80% coverage gate), ESLint + Prettier.
+  Runs on the Raspberry Pi (home-docker) via docker-infra: GHCR image, compose on
+  the docker-infra network, host port 8099, Apache reverse proxy.
+  Household: David, Lisa, Thomas (toddler, Kita Mon-Wed). Weeks are Monday-Sunday,
+  timezone Europe/Zurich. Planning rules live in Flatnotes (4 notes), not in this app.
+  Agreed decisions: see the grill-me decisions recorded in the first change's design.md.
+
+rules:
+  proposal:
+    - Include a Non-goals section
+  tasks:
+    - Every behaviour change has a unit test task (pure helpers exported and tested)
+    - Each group lands its own tests and docs; behaviour-changing changes end with a version bump via npm version
+    - Changes are applied and archived in order - add-meal-plan-store-and-mcp, deploy-mcp-to-home-docker, add-week-viewer, add-week-png-share, add-lisa-image-upload

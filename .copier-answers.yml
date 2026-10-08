@@ -1,0 +1,13 @@
+# Written by Copier — do not edit by hand.
+# Enables `copier update` to pull later template changes into this repo.
+_commit: 79fc160
+_src_path: gh:DavidWinterbottom-2/devcontainer-sandbox
+author: David Winterbottom
+description: 'Family meal planner: phone web viewer plus an MCP server so Claude can
+    plan, save and read our weekly meal plans.'
+has_web_ui: true
+project_slug: meal-planner
+project_title: Meal Planner
+stack: node
+year: '2026'
+
