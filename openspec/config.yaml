@@ -9,7 +9,8 @@ context: |
   Stack: Node 22, ES modules, Express, better-sqlite3, @modelcontextprotocol/sdk,
   zod, server-rendered HTML, vitest (>=80% coverage gate), ESLint + Prettier.
   Runs on the Raspberry Pi (home-docker) via docker-infra: GHCR image, compose on
-  the docker-infra network, host port 8099, Apache reverse proxy.
+  the docker-infra network with no published host port (Apache proxies by container name;
+  the viewer sits behind the entra-auth-proxy sidecar).
   Household: David, Lisa, Thomas (toddler, Kita Mon-Wed). Weeks are Monday-Sunday,
   timezone Europe/Zurich. Planning rules live in Flatnotes (4 notes), not in this app.
   Agreed decisions: see the grill-me decisions recorded in the first change's design.md.
