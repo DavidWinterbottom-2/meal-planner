@@ -8,7 +8,7 @@
 
 ## 2. Route and cache
 
-- [ ] 2.1 Add `GET /week/:date.png` behind viewer auth, returning 404 for unplanned weeks, with an LRU keyed `week_start:updated_at`. Verify route tests: 200 `image/png`, 404, a login redirect without a session, and new output after `update_day`
+- [ ] 2.1 Add `GET /week/:date.png` on the viewer listener (behind the login sidecar), returning 404 for unplanned weeks, with an LRU keyed `week_start:updated_at`. Verify route tests: 200 `image/png`, 404, the route absent on the MCP listener, and new output after `update_day`
 - [ ] 2.2 Measure the render time on the Pi for the seeded week. Verify it's under 1 s cold and near-instant cached, recorded in the PR
 
 ## 3. Share control

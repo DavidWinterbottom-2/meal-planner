@@ -140,3 +140,22 @@ The viewer SHALL offer no way to create, edit or delete plans.
 
 - **WHEN** any viewer page is inspected
 - **THEN** it contains no forms or controls that change plan data
+
+### Requirement: Usage analytics via self-hosted Umami
+
+Viewer pages SHALL include the Umami tracking script only when both `ANALYTICS_SCRIPT_URL` and `ANALYTICS_WEBSITE_ID` are set, as a deferred script with that `src` and `data-website-id`. With either unset, no analytics tag MUST be rendered. No other analytics or third-party tracking tag MAY be included (REPO-STANDARDS §11, HOSTING-SECURITY §H5).
+
+#### Scenario: Both settings present
+
+- **WHEN** `ANALYTICS_SCRIPT_URL` is `https://umami.winterbottom.xyz/script.js` and `ANALYTICS_WEBSITE_ID` is set
+- **THEN** every viewer page's `<head>` contains `<script defer src="https://umami.winterbottom.xyz/script.js" data-website-id="…">`
+
+#### Scenario: Half-configured is off
+
+- **WHEN** only one of the two settings is set
+- **THEN** no analytics script is rendered
+
+#### Scenario: Off by default
+
+- **WHEN** neither setting is set
+- **THEN** no analytics script is rendered, and the page makes no request to any analytics host

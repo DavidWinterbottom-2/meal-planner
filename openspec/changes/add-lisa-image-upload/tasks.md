@@ -15,7 +15,7 @@
 
 ## 3. Upload page and viewer
 
-- [ ] 3.1 Add `GET/POST /upload` (viewer auth, Origin check, default to the next unplanned Monday, `?week=` preselect). Verify route tests for the default week, preselection, rejection messages, and a cross-origin POST getting 403
+- [ ] 3.1 Add `GET/POST /upload` (viewer listener behind the login sidecar, Origin check, default to the next unplanned Monday, `?week=` preselect). Verify route tests for the default week, preselection, rejection messages, and a cross-origin POST getting 403
 - [ ] 3.2 Serve images at an authenticated route, show `image_only` weeks full width with tap to zoom, and the "Lisa's original" disclosure on data weeks. Add the "Upload Lisa's plan" link to the empty state. Verify `buildWeekView` unit tests and route tests (an image needs login)
 - [ ] 3.3 Phone check: upload from the iPhone camera roll and from Android, then view and zoom. Verify that the outcome is recorded in the PR
 
