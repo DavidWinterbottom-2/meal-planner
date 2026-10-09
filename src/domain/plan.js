@@ -1,6 +1,12 @@
 // Rules for a week's plan, independent of storage.
 
-import { assertMonday, isIsoDate, weekDates, weekOf } from "./dates.js";
+import {
+  assertMonday,
+  isIsoDate,
+  shortWeekday,
+  weekDates,
+  weekOf,
+} from "./dates.js";
 
 export const DAY_FIELDS = [
   "morning_snack",
@@ -54,14 +60,10 @@ export function validatePlan(weekStart, days) {
 // One line summarising a week's dinners in day order, e.g.
 // "Mon pasta · Tue fish · …", cut to `maxLen` characters.
 export function dinnerSummary(days, maxLen = 120) {
-  const short = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const parts = [...days]
     .sort((a, b) => a.date.localeCompare(b.date))
     .filter((d) => d.dinner)
-    .map(
-      (d) =>
-        `${short[(new Date(`${d.date}T00:00:00Z`).getUTCDay() + 6) % 7]} ${d.dinner}`,
-    );
+    .map((d) => `${shortWeekday(d.date)} ${d.dinner}`);
   const line = parts.join(" · ");
   if (line === "") return "(no dinners)";
   return line.length <= maxLen

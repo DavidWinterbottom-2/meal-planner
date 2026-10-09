@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { createHash } from "node:crypto";
-import { createApp } from "../src/app.js";
+import { createMcpApp } from "../src/mcp-app.js";
 import { readConfig } from "../src/config.js";
 import { openStore } from "../src/store.js";
 import { seedIfEmpty } from "../src/seed/weeks.js";
@@ -20,7 +20,7 @@ beforeAll(async () => {
     BASE_URL: "http://test",
   });
   const loadRules = async () => ({ sections: {}, missing: [], error: null });
-  const app = createApp({ store, loadRules, config, now: () => NOW });
+  const app = createMcpApp({ store, loadRules, config, now: () => NOW });
   await new Promise((resolve) => {
     server = app.listen(0, "127.0.0.1", resolve);
   });
@@ -221,5 +221,16 @@ describe("readConfig", () => {
     expect(readConfig({ MCP_API_KEY: KEY }).baseUrl).toBe(
       "http://localhost:3000",
     );
+  });
+});
+
+describe("parsePort", () => {
+  test("accepts digits in range and rejects the rest", async () => {
+    const { parsePort } = await import("../src/config.js");
+    expect(parsePort("3000")).toBe(3000);
+    expect(parsePort("0")).toBe(0);
+    expect(parsePort("3000abc")).toBeNull();
+    expect(parsePort("70000")).toBeNull();
+    expect(parsePort("-1")).toBeNull();
   });
 });

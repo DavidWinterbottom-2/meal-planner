@@ -10,9 +10,11 @@ export function readConfig(env) {
     errors.push(
       "MCP_API_KEY must be set (at least 32 characters; openssl rand -hex 32)",
     );
-  const port = Number.parseInt(env.PORT ?? "3000", 10);
-  if (!Number.isInteger(port) || port <= 0)
-    errors.push("PORT must be a positive integer");
+  const port = parsePort(env.PORT ?? "3000");
+  if (port === null)
+    errors.push(
+      "PORT must be a whole number from 0 to 65535 (0 = any free port)",
+    );
   const tokenTtlHours = Number.parseInt(env.OAUTH_TOKEN_TTL_H ?? "168", 10);
   if (!Number.isInteger(tokenTtlHours) || tokenTtlHours <= 0)
     errors.push("OAUTH_TOKEN_TTL_H must be a positive integer");
@@ -37,4 +39,11 @@ export function readConfig(env) {
       titles: ruleTitlesFromEnv(env),
     },
   };
+}
+
+// A TCP port from an env string: digits only, 0–65535; anything else is null.
+export function parsePort(value) {
+  if (!/^\d+$/.test(String(value))) return null;
+  const port = Number(value);
+  return port <= 65535 ? port : null;
 }

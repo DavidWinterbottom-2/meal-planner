@@ -97,3 +97,12 @@ describe("assertMonday", () => {
     expect(() => assertMonday("12/10/2026")).toThrow(/YYYY-MM-DD format/);
   });
 });
+
+describe("labels", () => {
+  test("shortWeekday and dayLabel", async () => {
+    const { shortWeekday, dayLabel } =
+      await import("../../src/domain/dates.js");
+    expect(shortWeekday("2026-10-18")).toBe("Sun");
+    expect(dayLabel("2026-10-05")).toBe("Mon 5 Oct");
+  });
+});

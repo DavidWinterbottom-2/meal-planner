@@ -40,6 +40,18 @@ export function weekdayName(date) {
   return WEEKDAYS[toUtc(date).getUTCDay()];
 }
 
+// "Mon", "Tue", … for a date.
+export function shortWeekday(date) {
+  return weekdayName(date).slice(0, 3);
+}
+
+// "Mon 12 Oct" style label for a date.
+export function dayLabel(date) {
+  const d = toUtc(date);
+  const month = d.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
+  return `${shortWeekday(date)} ${d.getUTCDate()} ${month}`;
+}
+
 export function isMonday(date) {
   return isIsoDate(date) && toUtc(date).getUTCDay() === 1;
 }

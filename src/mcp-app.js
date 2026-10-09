@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { installOAuth2AuthorizationServer } from "./vendor/oauth2-authorization-server.js";
 import { createMcpServer } from "./mcp.js";
 
-export function createApp({
+export function createMcpApp({
   store,
   loadRules,
   config,

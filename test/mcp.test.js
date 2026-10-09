@@ -48,6 +48,19 @@ afterEach(async () => {
   store.close();
 });
 
+describe("server info", () => {
+  test("reports the package.json version", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { version } = JSON.parse(
+      readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+    );
+    expect(client.getServerVersion()).toMatchObject({
+      name: "meal-planner",
+      version,
+    });
+  });
+});
+
 describe("tool list", () => {
   test("exposes exactly the planned tools", async () => {
     const { tools } = await client.listTools();
@@ -327,7 +340,7 @@ describe("formatWeekText", () => {
 
 describe("review follow-ups", () => {
   test("image_only weeks are flagged in the bundle and its summary", async () => {
-    store.db
+    store._db
       .prepare(
         "UPDATE week SET status = 'image_only' WHERE week_start = '2026-10-05'",
       )

@@ -8,5 +8,5 @@ merge, which is also why the source commit is recorded here and not in a
 header comment inside the files.
 
 To update: fix it in mcp-development first, then copy both files over these
-and update the commit above. The vendored test runs with `npm run test:vendor`
+and update the commit above, then regenerate `SHA256SUMS` (`sha256sum oauth2-* > SHA256SUMS`; `test/vendor.test.js` fails on any other edit). The vendored test runs with `npm run test:vendor`
 (it uses `node:test`, not vitest).

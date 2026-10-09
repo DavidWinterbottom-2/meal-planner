@@ -27,12 +27,12 @@ beforeEach(() => {
 afterEach(() => store.close());
 
 const history = () =>
-  store.db.prepare("SELECT * FROM history ORDER BY id").all();
+  store._db.prepare("SELECT * FROM history ORDER BY id").all();
 
 describe("schema", () => {
   test("creates the tables and sets the schema version", () => {
     const cols = (t) =>
-      store.db
+      store._db
         .prepare(`PRAGMA table_info(${t})`)
         .all()
         .map((c) => c.name);
@@ -46,7 +46,7 @@ describe("schema", () => {
     ]);
     expect(cols("day")).toContain("afternoon_snack");
     expect(cols("history")).toContain("undoes_id");
-    expect(store.db.pragma("user_version", { simple: true })).toBe(1);
+    expect(store._db.pragma("user_version", { simple: true })).toBe(1);
   });
 
   test("reopening an existing file keeps its data", () => {
@@ -69,7 +69,7 @@ describe("schema", () => {
     try {
       const path = join(dir, "meals.db");
       const a = openStore(path);
-      a.db.pragma("user_version = 99");
+      a._db.pragma("user_version = 99");
       a.close();
       expect(() => openStore(path)).toThrow(/newer than this app/);
     } finally {
@@ -339,9 +339,9 @@ describe("review follow-ups", () => {
   test("the database itself refuses to modify or delete history rows", () => {
     store.saveWeek(plan(), T1);
     expect(() =>
-      store.db.prepare("UPDATE history SET kind = 'create'").run(),
+      store._db.prepare("UPDATE history SET kind = 'create'").run(),
     ).toThrow(/append-only/);
-    expect(() => store.db.prepare("DELETE FROM history").run()).toThrow(
+    expect(() => store._db.prepare("DELETE FROM history").run()).toThrow(
       /append-only/,
     );
   });
@@ -395,5 +395,70 @@ describe("review follow-ups", () => {
         .map((w) => w.week_start),
     ).toEqual(["2026-10-12"]);
     expect(store.listWeeks({ from: "2026-10-05" })).toHaveLength(2);
+  });
+});
+
+describe("architecture review follow-ups", () => {
+  test("DAY_FIELDS matches the day table's columns", async () => {
+    const { DAY_FIELDS } = await import("../src/domain/plan.js");
+    const cols = store._db
+      .prepare("PRAGMA table_info(day)")
+      .all()
+      .map((c) => c.name)
+      .filter((c) => c !== "week_start" && c !== "date");
+    expect(cols).toEqual(DAY_FIELDS);
+  });
+
+  test("migrations apply only the steps a database is missing, in order", async () => {
+    const { migrate } = await import("../src/store.js");
+    const Database = (await import("better-sqlite3")).default;
+    const db = new Database(":memory:");
+    migrate(db, ["CREATE TABLE a (x)"]);
+    expect(db.pragma("user_version", { simple: true })).toBe(1);
+    migrate(db, ["CREATE TABLE a (x)", "CREATE TABLE b (y)"]);
+    expect(db.pragma("user_version", { simple: true })).toBe(2);
+    const tables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((t) => t.name);
+    expect(tables).toEqual(["a", "b"]);
+    expect(() => migrate(db, ["CREATE TABLE a (x)"])).toThrow(
+      /newer than this app/,
+    );
+    db.close();
+  });
+
+  test("a failed migration step leaves the version where it was", async () => {
+    const { migrate } = await import("../src/store.js");
+    const Database = (await import("better-sqlite3")).default;
+    const db = new Database(":memory:");
+    expect(() => migrate(db, ["CREATE TABLE a (x)", "NOT SQL"])).toThrow();
+    expect(db.pragma("user_version", { simple: true })).toBe(1);
+    db.close();
+  });
+
+  test("undo restores a snapshot written before a field existed", () => {
+    store.saveWeek(plan(), T1);
+    // Simulate an old history row whose snapshot lacks `notes` and a day field.
+    const old = {
+      week_start: "2026-10-12",
+      source: "Lisa",
+      status: "data",
+      prep: null,
+      updated_at: T1,
+      days: [{ date: "2026-10-12", dinner: "Old dinner" }],
+    };
+    store._db.exec("DROP TRIGGER history_no_update");
+    store._db
+      .prepare(
+        "UPDATE history SET before_json = ?, kind = 'replace' WHERE id = 1",
+      )
+      .run(JSON.stringify(old));
+    const restored = store.undoLastChange(T2);
+    expect(restored.week).toMatchObject({ source: "Lisa", notes: null });
+    expect(store.getWeek("2026-10-12").days[0]).toMatchObject({
+      dinner: "Old dinner",
+      lunch: null,
+    });
   });
 });

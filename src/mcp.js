@@ -3,13 +3,13 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import {
-  weekOf,
-  zurichToday,
-  resolveWeek,
-  weekdayName,
-} from "./domain/dates.js";
-import { RULE_SECTIONS } from "./flatnotes.js";
+import { readFileSync } from "node:fs";
+import { dayLabel, weekOf, zurichToday, resolveWeek } from "./domain/dates.js";
+
+// The server reports the app version from package.json, its single source of truth.
+const { version: APP_VERSION } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+);
 
 const DATE = z.string().max(10).describe("A date in YYYY-MM-DD format");
 const MONDAY = z
@@ -76,13 +76,6 @@ const guarded = (fn) => async (args) => {
   }
 };
 
-// "Mon 12 Oct" style label for a date.
-function dayLabel(date) {
-  const d = new Date(`${date}T00:00:00Z`);
-  const month = d.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
-  return `${weekdayName(date).slice(0, 3)} ${d.getUTCDate()} ${month}`;
-}
-
 // A readable rendering of a week for Claude, one line per day.
 export function formatWeekText(week) {
   const header = `Week of ${dayLabel(week.week_start)} — ${week.source}'s plan (${week.status})`;
@@ -142,7 +135,7 @@ export async function buildPlanningContext({
 
 // `now` is injected so tests can fix "today"; `loadRules` comes from the Flatnotes client.
 export function createMcpServer({ store, loadRules, now = () => new Date() }) {
-  const server = new McpServer({ name: "meal-planner", version: "1.0.0" });
+  const server = new McpServer({ name: "meal-planner", version: APP_VERSION });
   const stamp = () => now().toISOString();
 
   server.registerTool(
@@ -339,5 +332,3 @@ export function createMcpServer({ store, loadRules, now = () => new Date() }) {
 
   return server;
 }
-
-export { RULE_SECTIONS };

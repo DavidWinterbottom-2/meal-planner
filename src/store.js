@@ -19,9 +19,12 @@ import {
 } from "./domain/plan.js";
 import { pickUndoTarget } from "./domain/history.js";
 
-const SCHEMA_VERSION = 1;
-
-const SCHEMA = `
+// Schema migrations, applied in order. The database's `user_version` is the
+// number of steps already applied. Never edit a step once it has shipped;
+// add a new one instead.
+const MIGRATIONS = [
+  // 1: weeks, days and the append-only history.
+  `
 CREATE TABLE week (
   week_start TEXT PRIMARY KEY,
   source     TEXT NOT NULL,
@@ -54,7 +57,8 @@ CREATE TRIGGER history_no_update BEFORE UPDATE ON history
 BEGIN SELECT RAISE(ABORT, 'history is append-only'); END;
 CREATE TRIGGER history_no_delete BEFORE DELETE ON history
 BEGIN SELECT RAISE(ABORT, 'history is append-only'); END;
-`;
+`,
+];
 
 export class NotFoundError extends Error {}
 
@@ -83,8 +87,10 @@ export function openStore(path = ":memory:") {
       `INSERT INTO history (week_start, kind, before_json, after_json, undoes_id, at)
        VALUES (@week_start, @kind, @before_json, @after_json, @undoes_id, @at)`,
     ),
-    historyRows: db.prepare(
-      "SELECT id, week_start, kind, before_json, undoes_id FROM history",
+    // Only what pickUndoTarget needs; the target's snapshot is read by id.
+    historyRows: db.prepare("SELECT id, kind, undoes_id FROM history"),
+    historyEntry: db.prepare(
+      "SELECT id, week_start, kind, before_json FROM history WHERE id = ?",
     ),
     weekCount: db.prepare("SELECT count(*) AS n FROM week"),
     historyCount: db.prepare("SELECT count(*) AS n FROM history"),
@@ -100,6 +106,9 @@ export function openStore(path = ":memory:") {
   }
 
   // Replace whatever is stored for the snapshot's week with the snapshot.
+  // This is the single place that rewrites a week and all its child rows:
+  // a table added under `week` must be written (and read in snapshot())
+  // here, or undo and update_day will silently drop it.
   function writeSnapshot(weekStart, snap) {
     q.deleteWeek.run(weekStart);
     if (!snap) return;
@@ -186,10 +195,13 @@ export function openStore(path = ":memory:") {
   });
 
   const undoTx = db.transaction((at) => {
-    const target = pickUndoTarget(q.historyRows.all());
-    if (!target) return null;
+    const picked = pickUndoTarget(q.historyRows.all());
+    if (!picked) return null;
+    const target = q.historyEntry.get(picked.id);
     const current = snapshot(target.week_start);
-    const restored = target.before_json ? JSON.parse(target.before_json) : null;
+    const restored = target.before_json
+      ? normalizeSnapshot(JSON.parse(target.before_json))
+      : null;
     writeSnapshot(target.week_start, restored);
     record(target.week_start, "undo", current, restored, at, target.id);
     return {
@@ -200,7 +212,8 @@ export function openStore(path = ":memory:") {
   });
 
   return {
-    db,
+    // Raw handle for tests only; production code goes through the methods.
+    _db: db,
     saveWeek: (plan, at) => withAllDays(saveWeekTx(plan, at)),
     updateDay: (date, fields, at) => updateDayTx(date, fields, at),
     deleteWeek: (weekStart, at) => deleteWeekTx(weekStart, at),
@@ -271,14 +284,34 @@ function withAllDays(snap) {
   };
 }
 
-function migrate(db) {
+// Snapshots in history are a stored format, not a dump of today's columns:
+// a row written before a column existed must still restore. Fill every
+// field the current schema expects, defaulting what an older snapshot lacks.
+export function normalizeSnapshot(snap) {
+  return {
+    week_start: snap.week_start,
+    source: snap.source ?? "David",
+    status: snap.status ?? "data",
+    prep: snap.prep ?? null,
+    notes: snap.notes ?? null,
+    updated_at: snap.updated_at,
+    days: (snap.days ?? []).map((d) => ({ ...emptyDay(d.date), ...d })),
+  };
+}
+
+// Apply every migration step the database hasn't had yet, each in its own
+// transaction together with its user_version bump.
+export function migrate(db, migrations = MIGRATIONS) {
   const version = db.pragma("user_version", { simple: true });
-  if (version === SCHEMA_VERSION) return;
-  if (version !== 0) {
+  if (version > migrations.length) {
     throw new Error(
-      `database schema version ${version} is newer than this app understands (${SCHEMA_VERSION})`,
+      `database schema version ${version} is newer than this app understands (${migrations.length})`,
     );
   }
-  db.exec(SCHEMA);
-  db.pragma(`user_version = ${SCHEMA_VERSION}`);
+  for (let step = version; step < migrations.length; step++) {
+    db.transaction(() => {
+      db.exec(migrations[step]);
+      db.pragma(`user_version = ${step + 1}`);
+    })();
+  }
 }
