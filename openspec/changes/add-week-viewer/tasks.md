@@ -25,12 +25,14 @@
 - [ ] 3.3 Implement the `/`, `/week/:date` (redirect to Monday, 404 for invalid) and `/history` routes, the HTML renderers, and a sign-out link to the sidecar's `/oauth2/sign_out`. Verify route tests on the viewer listener with seeded data
 - [ ] 3.4 Add the swipe script (|dx| > 60px and > 2·|dy|) and Prev, This week and Next links. Verify a unit test of the gesture classifier and a manual check on phone
 - [ ] 3.5 Style the day rows (prominent dinner, smaller lunch and snacks, italic notes, today highlight), the prep block, light and dark themes. Verify no horizontal scroll at 390px (Playwright screenshot in both themes, attached to the PR)
+- [ ] 3.5a Implement `analyticsTag(env)` and include it in every viewer page's `<head>`. Add `ANALYTICS_SCRIPT_URL` / `ANALYTICS_WEBSITE_ID` (empty) to `.env.example`. Verify unit tests for both-set, half-set and unset, attribute escaping, and that no page contains any other script `src` host
 - [ ] 3.6 Add the manifest (`standalone`, `start_url: /`, a 180px Apple touch icon, a 512px icon) under the paths the sidecar lets through without login. Verify that the manifest test passes and Chrome DevTools reports it installable
 
 ## 4. Registration, docs and release
 
 - [ ] 4.1 In docker-infra, update the tools-index entry to `match: "meals.winterbottom.xyz"`, `auth: "entra-proxy"`, update the tools-page card, and the service README (both hosts, auth per surface, the sidecar). Verify that all three docker-infra checks pass
-- [ ] 4.2 Update the README for the viewer URL, phone install steps, `VIEWER_PORT`, and how login works (the sidecar, not the app). Verify that the steps match the spike outcome
+- [ ] 4.1a Create a "Meal Planner" website in Umami and set `ANALYTICS_SCRIPT_URL=https://umami.winterbottom.xyz/script.js` and `ANALYTICS_WEBSITE_ID` in the Pi `.env` and the docker-infra compose and `.env.example`. Verify that a page view from the phone appears in the Umami dashboard
+- [ ] 4.2 Update the README for the viewer URL, phone install steps, `VIEWER_PORT`, how login works (the sidecar, not the app), and the analytics settings. Verify that the steps match the spike outcome
 - [ ] 4.3 `npm version minor`, then verify that `npm run lint` and `npm test` (coverage ≥80%) pass
 
 ## Workflow follow-up

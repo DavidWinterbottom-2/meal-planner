@@ -12,6 +12,7 @@ David wants a button on his phone's home screen that opens straight onto this we
   - Prev, This week and Next buttons, plus swipe navigation
   - today highlighted, dinner prominent, Kita days, the prep block and a source label
   - an empty-week state, and light and dark mode via the shared design system
+- Anonymous usage analytics through the shared self-hosted Umami, using the standard off-by-default `ANALYTICS_SCRIPT_URL` / `ANALYTICS_WEBSITE_ID` env settings (REPO-STANDARDS §11).
 - A web app manifest and icon, so it installs to the home screen and opens full screen.
 - Microsoft Entra login on every viewer page via the existing **`entra-auth-proxy` sidecar** (oauth2-proxy, as used by Hermes), limited to David's email, with a 1-year session. The app itself carries no login code. It serves the viewer on a second, unpublished port that only the sidecar can reach. The MCP surface keeps its own OAuth and never passes through the sidecar.
 - A **spike first**: confirm that Entra login completes inside an iOS home-screen web app (standalone mode) and that the session sticks. Android is checked too.

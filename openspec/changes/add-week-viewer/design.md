@@ -43,6 +43,8 @@ The store, week resolution and `listWeeks` come from `add-meal-plan-store-and-mc
 
 **Swipe.** A small inline script with touchstart/touchend. It navigates when |dx| > 60px and |dx| > 2·|dy|, which separates a swipe from scrolling. Prev and Next remain real links, so the page works without JS.
 
+**Analytics (REPO-STANDARDS §11).** A pure `analyticsTag(env)` returns the Umami `<script defer src=… data-website-id=…>` only when both `ANALYTICS_SCRIPT_URL` and `ANALYTICS_WEBSITE_ID` are set (attribute-escaped), otherwise an empty string. Every viewer page's `<head>` includes its result. The app gets its own website in Umami. Umami is cookieless and first-party, so it doesn't interfere with the sidecar's cookie. Page paths like `/week/2026-10-12` are the only data sent, and they aren't sensitive. No `identify()` call is made, per HOSTING-SECURITY §H5.
+
 **Design system.** Vendor `winterbottom.css` and `winterbottom-theme.js` via the `design-system-sync` skill. Dinner gets a larger type token, and today's row uses the accent-surface token. The custom palette from the brief is not used.
 
 **tools-index.** One service, one entry. Switch the entry to `match: "meals.winterbottom.xyz"`, `auth: "entra-proxy"`. The public tools page keeps a card for the viewer, and the MCP endpoint is listed in the card's description. The MCP surface's auth is documented in the service README. _Open question below._
