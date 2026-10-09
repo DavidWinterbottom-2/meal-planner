@@ -8,7 +8,7 @@ The `flatnotes-mcp` and `my-sweepy` services in docker-infra are the precedents:
 - Apache on the Pi proxying `host.docker.internal:<port>`
 - tools-index registration enforced by CI.
 
-Host ports 8090–8098 and 8100 are taken; 8099 is free.
+Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the `docker-infra` network, so it can reach `meal-planner:3000` by name without any host port. HOSTING-SECURITY §H3 says a protected app publishes no host ports, and change 1's security review found that a directly reachable app port lets a caller forge `X-Forwarded-For`.
 
 ## Goals / Non-Goals
 
@@ -39,8 +39,10 @@ Host ports 8090–8098 and 8100 are taken; 8099 is free.
 
 **Apache.** In the `mcp.winterbottom.xyz` :443 vhost, add these next to the chores lines:
 
-- `ProxyPass /.well-known/oauth-authorization-server/meals http://host.docker.internal:8099/.well-known/oauth-authorization-server`
-- `ProxyPass /meals/ http://host.docker.internal:8099/` and the matching `ProxyPassReverse`.
+- `ProxyPass /.well-known/oauth-authorization-server/meals http://meal-planner:3000/.well-known/oauth-authorization-server`
+- `ProxyPass /meals/ http://meal-planner:3000/` and the matching `ProxyPassReverse`.
+
+**No host port for the app.** The app `expose`s 3000 on `docker-infra` and publishes nothing; Apache proxies to it by container name. This departs from the other MCP services, which use `host.docker.internal:<port>`, for two reasons. It satisfies §H3, and it means only Apache can reach the app, which is what `trust proxy: 1` relies on. _Alternative:_ publish `8099` bound to the Docker bridge only. Rejected: it still opens a host port, and it depends on the bridge address.
 
 `BASE_URL=https://mcp.winterbottom.xyz/meals`. If the docker-infra Apache stopgap (basic auth on `/*/oauth/authorize`) has landed, its `LocationMatch` covers `/meals/` automatically.
 

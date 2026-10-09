@@ -9,7 +9,7 @@ The MCP server from `add-meal-plan-store-and-mcp` only helps once it runs on the
 - A `Dockerfile` (multi-arch, `linux/arm64` for the Pi) and a GitHub Actions workflow that builds and pushes `ghcr.io/davidwinterbottom-2/meal-planner` on pushes to `main`.
 - A new docker-infra service, `home-docker/services/meal-planner/`. It covers:
   - compose on the `docker-infra` network
-  - host port 8099
+  - no host port: Apache reaches the app as `meal-planner:3000` over the `docker-infra` network (HOSTING-SECURITY §H3)
   - a `/data` volume for SQLite
   - a `.env.example`
   - a README

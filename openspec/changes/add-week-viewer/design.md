@@ -27,7 +27,7 @@ The store, week resolution and `listWeeks` come from `add-meal-plan-store-and-mc
   - `OAUTH2_PROXY_REDIRECT_URL=https://meals.winterbottom.xyz/oauth2/callback`
   - client ID and secret, cookie secret
   - allow-list via `OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE`, a mounted file containing only David's address. `EMAIL_DOMAINS=*` alone would admit anyone in the tenant.
-  - `OAUTH2_PROXY_COOKIE_EXPIRE=8760h` (1 year), `COOKIE_SECURE=true`, `COOKIE_SAMESITE=lax`
+  - `OAUTH2_PROXY_COOKIE_EXPIRE=8760h` (1 year) and `OAUTH2_PROXY_COOKIE_SAMESITE=lax`. Provider, issuer, cookie-secure, scope and the unverified-email trust are baked into the `entra-auth-proxy` image, so they aren't repeated here (HOSTING-SECURITY §H3)
   - `OAUTH2_PROXY_SKIP_AUTH_ROUTES` for `^/manifest\.webmanifest$` and `^/icons/`, so the home-screen install works before login.
 - The cookie is encrypted by the sidecar and carries the session itself, so a container restart doesn't log you out.
 - The app trusts nothing from the sidecar's headers; it just serves whoever reaches the viewer port. That is safe only because the viewer port is unpublished.
