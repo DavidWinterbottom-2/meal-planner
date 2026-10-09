@@ -28,12 +28,13 @@ Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the
 **CI.** `build.yml`, adapted from mcp-development's `build-flatnotes-mcp.yml`:
 
 - QEMU and buildx, `platforms: linux/arm64`, push on `main`.
-- Tags `latest` plus the `package.json` version.
+- Tags `latest`, the `package.json` version, and `sha-<short commit>`. The `sha-` tag is what a rollback pins with `IMAGE_TAG`, because a version tag can be rebuilt from a later commit that didn't bump it.
+- [Likely] An arm64 build under QEMU takes several minutes, mostly `npm ci` compiling `better-sqlite3` if no prebuilt binary matches. Cache the npm layer with the buildx GHA cache.
 
 **Compose.**
 
 - `image: ghcr.io/davidwinterbottom-2/meal-planner:${IMAGE_TAG:-latest}`, `TZ=Europe/Zurich`, `MEALS_DB=/data/meals.db`.
-- Volume `${MEALS_DATA_PATH:-./data}:/data`.
+- Volume `${MEALS_DATA_PATH:-./data}:/data`. The image runs as the non-root `node` user (uid 1000), so the host directory must be owned by uid 1000 (`make install` creates it with `install -d -o 1000 -g 1000`); otherwise SQLite fails to open the database on first start.
 - Joins the `docker-infra` network so `http://flatnotes:8080` resolves.
 - Log rotation as in the other services.
 
@@ -42,7 +43,11 @@ Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the
 - `ProxyPass /.well-known/oauth-authorization-server/meals http://meal-planner:3000/.well-known/oauth-authorization-server disablereuse=On`
 - `ProxyPass /meals/ http://meal-planner:3000/ disablereuse=On` and the matching `ProxyPassReverse`.
 
-**No host port for the app.** The app `expose`s 3000 on `docker-infra` and publishes nothing; Apache proxies to it by container name. This departs from the other MCP services, which use `host.docker.internal:<port>`, for two reasons. It satisfies §H3, and it means only Apache can reach the app, which is what `trust proxy: 1` relies on. _Alternative:_ publish `8099` bound to the Docker bridge only. Rejected: it still opens a host port, and it depends on the bridge address.
+**No host port for the app.** The app `expose`s 3000 on `docker-infra` and publishes nothing; Apache proxies to it by container name. This departs from the other MCP services, which use `host.docker.internal:<port>`, for two reasons. It satisfies §H3, and it means only Apache can reach the app, which is what `trust proxy: 1` relies on. **[Open, architecture review finding 1]** The `docker-infra` network is flat, so every other container on it can also reach `meal-planner:3000`. "Only Apache" holds for the host and the LAN, not for neighbouring containers; the decision on how to close that is pending with David. _Alternative:_ publish `8099` bound to the Docker bridge only. Rejected: it still opens a host port, and it depends on the bridge address.
+
+**Authentication of the MCP surface (HOSTING-SECURITY §H2).** §H2 makes Microsoft Entra the one identity provider, but claude.ai's custom connectors can only do dynamic client registration plus PKCE, which Entra doesn't offer them. The MCP surface therefore uses the shared OAuth module (`auth: "mcp"`, already in the §H2 vocabulary for exactly this reason), gated by the approval password and `x-api-key`. It is the same mechanism as every other MCP server on `mcp.winterbottom.xyz`.
+
+**OAuth state lives in memory.** The shared module keeps registered clients, codes and access tokens in memory. Every redeploy or Watchtower update therefore drops them, and the claude.ai connector must be re-authorised (Disconnect, Connect, enter the approval password). This is the same behaviour as the other MCP servers. It is documented in the README rather than fixed here, because the fix belongs in the shared module.
 
 **Container recreation and Apache's cached address.** [Likely] Apache keeps the address it resolved for `meal-planner` together with its pooled connections. When Watchtower or a redeploy recreates the container, Docker may give it a new address, and Apache would then return 502 until it is reloaded. The `host.docker.internal:<port>` services can't hit this, because their target never changes.
 

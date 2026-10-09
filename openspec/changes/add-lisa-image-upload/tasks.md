@@ -2,14 +2,14 @@
 
 ## 1. Spike: do tool-returned images reach Claude? (gate)
 
-- [ ] 1.1 Add the flag-guarded `spike_image_echo` tool returning the seeded week's PNG as MCP image content. Verify a unit test that the tool exists only when `SPIKE_IMAGE_TOOL=true`, then deploy with the flag on
+- [ ] 1.1 Add the flag-guarded `spike_image_echo` tool returning a fixture PNG committed under `test/fixtures/` (a photographed sample plan, no dependency on `add-week-png-share`) as MCP image content. Run this as soon as `deploy-mcp-to-home-docker` is live. Verify a unit test that the tool exists only when `SPIKE_IMAGE_TOOL=true`, then deploy with the flag on
 - [ ] 1.2 In claude.ai web, the iOS app and the Android app, ask Claude to call `spike_image_echo` and read Thursday's dinner. Verify by recording each client's answer in `docs/spikes/mcp-image-content.md`. **If any client fails, stop here:** update the README to "route 1 only", remove the tool, and delete this change
 - [ ] 1.3 Remove `spike_image_echo` and the flag. Verify the tool list no longer contains it
 
 ## 2. Storage and sanitising
 
 - [ ] 2.1 Add `sharp` and `multer`. Verify `npm ci` on linux-arm64 (CI QEMU) installs the prebuilt sharp
-- [ ] 2.2 Add the `image` table, and extend history snapshots to include the image reference. Verify migration and unit tests covering undo of upload-create and upload-replace
+- [ ] 2.2 Add the `image` table and a nullable `image_id` column on `week`, as a new step in the store's `MIGRATIONS` (never edit step 1). Because the reference is a week column, `writeSnapshot`/`snapshot` carry it and history snapshots include it with no extra table to restore; add it to `normalizeSnapshot` defaulting to `null`, which is correct for snapshots written before images existed (undo is LIFO, so such a snapshot predates any upload). Verify migration and unit tests covering undo of upload-create and upload-replace, and undo of a pre-image snapshot
 - [ ] 2.3 Implement `sanitiseImage(buffer)` (rotate, strip metadata, ≤2000px, JPEG q85) and type/size validation by magic bytes. Verify unit tests: GPS EXIF is gone, dimensions are capped, a PDF is rejected, an oversize file is rejected
 - [ ] 2.4 Implement `attachImage(weekStart, file)` (creating an `image_only` week with source Lisa, or attaching to an existing week; replace semantics; file and row ordering) and the orphan sweep. Verify store tests for each plan-images upload scenario
 

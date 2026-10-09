@@ -11,7 +11,7 @@ The store, week resolution and `listWeeks` come from `add-meal-plan-store-and-mc
 - Server-rendered HTML with near-zero client JS: only swipe and theme handling.
 - No login code in the app: reuse the `entra-auth-proxy` sidecar exactly as Hermes does.
 - The MCP surface never passes through the sidecar; claude.ai's OAuth (dynamic registration plus PKCE) is something oauth2-proxy cannot do.
-- Prove the riskiest assumption (iOS standalone and OIDC) before building pages.
+- Check the riskiest assumption (iOS standalone and OIDC) early, so the README's phone steps are right.
 
 **Non-Goals:** a service worker or offline mode, client-side routing.
 
@@ -32,7 +32,7 @@ The store, week resolution and `listWeeks` come from `add-meal-plan-store-and-mc
 - The cookie is encrypted by the sidecar and carries the session itself, so a container restart doesn't log you out.
 - The app trusts nothing from the sidecar's headers; it just serves whoever reaches the viewer port. That is safe only because the viewer port is unpublished.
 
-**Spike first: iOS standalone with the sidecar login.**
+**Verify early: iOS standalone with the sidecar login.** This is a verification, not a gate: no page or route depends on its outcome, because the fallback needs no app code. It runs early only so a fallback is known before the phone instructions are written.
 
 - Deploy the sidecar in front of a stub viewer page plus the manifest and icons, then install to the home screen on iPhone and Android.
 - Pass criteria: login completes and returns into the standalone app, and it stays logged in after closing the app, restarting the phone and restarting the containers.

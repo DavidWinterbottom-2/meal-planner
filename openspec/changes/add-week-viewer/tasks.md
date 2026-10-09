@@ -7,7 +7,7 @@
 - [ ] 1.3 In docker-infra's meal-planner service, add the `entra-auth-proxy` sidecar, copying Hermes' block. Settings: upstream `http://meal-planner:3001`, the redirect URL, an authenticated-emails file mounted with David's address only, `COOKIE_EXPIRE=8760h`, `COOKIE_SAMESITE=lax` (nothing the image already bakes in, per HOSTING-SECURITY §H3), and skip-auth routes for the manifest and icons. Publish only the sidecar's port, on the next free host port, and `expose` 3001 on the app without publishing it. Verify that `docker compose config` parses and that port 3001 is not published on the host
 - [ ] 1.4 Add the `meals.winterbottom.xyz` :80/:443 vhost proxying to the sidecar's port. Verify that `httpd -t` passes
 
-## 2. Viewer listener and spike: login in a home-screen app
+## 2. Viewer listener and login verification in a home-screen app
 
 - [ ] 2.1 Add the viewer listener: a second Express app on `VIEWER_PORT` (default 3001) in the same process, serving only viewer routes and static files. The MCP listener keeps only `/mcp`, `/oauth/*`, `/.well-known/*` and `/health`. Verify route tests that the MCP listener returns 404 for `/week/...` and `/history`, and that the viewer listener returns 404 for `/mcp` and `/oauth/register`
 - [ ] 2.2 Serve a stub `/` page, the manifest and the icons on the viewer listener, then deploy with the sidecar. Verify on iPhone and Android:
@@ -26,6 +26,7 @@
 - [ ] 3.4 Add the swipe script (|dx| > 60px and > 2·|dy|) and Prev, This week and Next links. Verify a unit test of the gesture classifier and a manual check on phone
 - [ ] 3.5 Style the day rows (prominent dinner, smaller lunch and snacks, italic notes, today highlight), the prep block, light and dark themes. Verify no horizontal scroll at 390px (Playwright screenshot in both themes, attached to the PR)
 - [ ] 3.5a Implement `analyticsTag(env)` and include it in every viewer page's `<head>`. Add `ANALYTICS_SCRIPT_URL` / `ANALYTICS_WEBSITE_ID` (empty) to `.env.example`. Verify unit tests for both-set, half-set and unset, attribute escaping, and that no page contains any other script `src` host
+- [ ] 3.5b Add an `e2e` CI job: build the image, start it with dummy env, and drive both listeners with Playwright (the viewer pages render seeded weeks on 3001; `/mcp` rejects an unauthenticated call and `/week/...` is 404 on 3000). Verify the job is green and required on PRs
 - [ ] 3.6 Add the manifest (`standalone`, `start_url: /`, a 180px Apple touch icon, a 512px icon) under the paths the sidecar lets through without login. Verify that the manifest test passes and Chrome DevTools reports it installable
 
 ## 4. Registration, docs and release
