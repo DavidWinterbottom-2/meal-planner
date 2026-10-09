@@ -39,10 +39,16 @@ Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the
 
 **Apache.** In the `mcp.winterbottom.xyz` :443 vhost, add these next to the chores lines:
 
-- `ProxyPass /.well-known/oauth-authorization-server/meals http://meal-planner:3000/.well-known/oauth-authorization-server`
-- `ProxyPass /meals/ http://meal-planner:3000/` and the matching `ProxyPassReverse`.
+- `ProxyPass /.well-known/oauth-authorization-server/meals http://meal-planner:3000/.well-known/oauth-authorization-server disablereuse=On`
+- `ProxyPass /meals/ http://meal-planner:3000/ disablereuse=On` and the matching `ProxyPassReverse`.
 
 **No host port for the app.** The app `expose`s 3000 on `docker-infra` and publishes nothing; Apache proxies to it by container name. This departs from the other MCP services, which use `host.docker.internal:<port>`, for two reasons. It satisfies §H3, and it means only Apache can reach the app, which is what `trust proxy: 1` relies on. _Alternative:_ publish `8099` bound to the Docker bridge only. Rejected: it still opens a host port, and it depends on the bridge address.
+
+**Container recreation and Apache's cached address.** [Likely] Apache keeps the address it resolved for `meal-planner` together with its pooled connections. When Watchtower or a redeploy recreates the container, Docker may give it a new address, and Apache would then return 502 until it is reloaded. The `host.docker.internal:<port>` services can't hit this, because their target never changes.
+
+- **Mitigation:** `disablereuse=On` on both meals `ProxyPass` lines. Apache then opens a fresh connection per request and keeps no pool tied to the old address. At meals' traffic (a handful of requests a day) this costs nothing.
+- **Unverified:** [Guessing] whether this also forces Apache to re-resolve the name. The deploy tasks include a recreate-the-container check to settle it.
+- **If that check fails:** pin the container's address on `docker-infra` (this needs a fixed subnet), or fall back to the bridge-bound port with a recorded §H3 exception. Pinning is deliberately not done up front.
 
 `BASE_URL=https://mcp.winterbottom.xyz/meals`. If the docker-infra Apache stopgap (basic auth on `/*/oauth/authorize`) has landed, its `LocationMatch` covers `/meals/` automatically.
 
