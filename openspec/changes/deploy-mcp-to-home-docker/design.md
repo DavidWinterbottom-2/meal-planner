@@ -52,8 +52,8 @@ Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the
 **Container recreation and Apache's cached address.** [Likely] Apache keeps the address it resolved for `meal-planner` together with its pooled connections. When Watchtower or a redeploy recreates the container, Docker may give it a new address, and Apache would then return 502 until it is reloaded. The `host.docker.internal:<port>` services can't hit this, because their target never changes.
 
 - **Mitigation:** `disablereuse=On` on both meals `ProxyPass` lines. Apache then opens a fresh connection per request and keeps no pool tied to the old address. At meals' traffic (a handful of requests a day) this costs nothing.
-- **Unverified:** [Guessing] whether this also forces Apache to re-resolve the name. The deploy tasks include a recreate-the-container check to settle it.
-- **If that check fails:** pin the container's address on `docker-infra` (this needs a fixed subnet), or fall back to the bridge-bound port with a recorded §H3 exception. Pinning is deliberately not done up front.
+- **Tested locally (2026-10-09, httpd 2.4, a user-defined Docker network):** the app was recreated on a new address (`.3` → `.4`) and `/meals/health` stayed 200 with no Apache reload. The same test **without** `disablereuse` also passed, so the 502 risk above didn't reproduce: Apache re-resolves the name when it opens a connection, and drops a pooled connection to a dead container. `disablereuse=On` stays anyway, as a free guard for a recreate while a pooled connection is busy, which the test didn't cover. Apache also starts with the app down; requests get a 500 until it is up.
+- **If the Pi check (task 4.1a) still fails:** pin the container's address on `docker-infra` (this needs a fixed subnet), or fall back to the bridge-bound port with a recorded §H3 exception.
 
 `BASE_URL=https://mcp.winterbottom.xyz/meals`. If the docker-infra Apache stopgap (basic auth on `/*/oauth/authorize`) has landed, its `LocationMatch` covers `/meals/` automatically.
 
@@ -68,7 +68,8 @@ Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the
 
 1. Merge the image CI and confirm the image exists in GHCR.
 2. Merge the docker-infra PR.
-3. On the Pi: create `.env` (store it in Bitwarden as **Meal Planner .env**), run `make install`, reload Apache.
-4. Add the connector in claude.ai.
+3. Make the GHCR package public (one-time; new packages publish as private, and the Pi pulls without credentials).
+4. On the Pi: create `.env` and back it up with docker-infra's `scripts/backup-env-to-bitwarden.py`, run `make install`, restart Apache.
+5. Add the connector in claude.ai.
 
 Rollback: `docker compose down`, and revert the vhost lines.
