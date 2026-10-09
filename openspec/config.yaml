@@ -12,7 +12,7 @@ context: |
   the docker-infra network with no published host port (Apache proxies by container name;
   the viewer sits behind the entra-auth-proxy sidecar).
   Household: David, Lisa, Thomas (toddler, Kita Mon-Wed). Weeks are Monday-Sunday,
-  timezone Europe/Zurich. Planning rules live in Flatnotes (4 notes), not in this app.
+  timezone Europe/Zurich. Planning rules live in Flatnotes (4 notes), not in this app; the app holds no Flatnotes credentials and Claude reads the notes itself.
   Agreed decisions: see the grill-me decisions recorded in the first change's design.md.
 
 rules:

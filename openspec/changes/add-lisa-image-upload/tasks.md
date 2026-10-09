@@ -8,6 +8,8 @@
 
 ## 2. Storage and sanitising
 
+- [ ] 2.0 Close the flat-network gap before adding writes (accepted for v1 only; see `deploy-mcp-to-home-docker` design): put the app and the `entra-auth-proxy` sidecar on a private compose network and bind the viewer listener only on it. Verify from another container on `docker-infra` that `meal-planner:3001` doesn't answer, and that the viewer still works through the sidecar
+
 - [ ] 2.1 Add `sharp` and `multer`. Verify `npm ci` on linux-arm64 (CI QEMU) installs the prebuilt sharp
 - [ ] 2.2 Add the `image` table and a nullable `image_id` column on `week`, as a new step in the store's `MIGRATIONS` (never edit step 1). Because the reference is a week column, `writeSnapshot`/`snapshot` carry it and history snapshots include it with no extra table to restore; add it to `normalizeSnapshot` defaulting to `null`, which is correct for snapshots written before images existed (undo is LIFO, so such a snapshot predates any upload). Verify migration and unit tests covering undo of upload-create and upload-replace, and undo of a pre-image snapshot
 - [ ] 2.3 Implement `sanitiseImage(buffer)` (rotate, strip metadata, ≤2000px, JPEG q85) and type/size validation by magic bytes. Verify unit tests: GPS EXIF is gone, dimensions are capped, a PDF is rejected, an oversize file is rejected

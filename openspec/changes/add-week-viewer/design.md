@@ -30,7 +30,7 @@ The store, week resolution and `listWeeks` come from `add-meal-plan-store-and-mc
   - `OAUTH2_PROXY_COOKIE_EXPIRE=8760h` (1 year) and `OAUTH2_PROXY_COOKIE_SAMESITE=lax`. Provider, issuer, cookie-secure, scope and the unverified-email trust are baked into the `entra-auth-proxy` image, so they aren't repeated here (HOSTING-SECURITY §H3)
   - `OAUTH2_PROXY_SKIP_AUTH_ROUTES` for `^/manifest\.webmanifest$` and `^/icons/`, so the home-screen install works before login.
 - The cookie is encrypted by the sidecar and carries the session itself, so a container restart doesn't log you out.
-- The app trusts nothing from the sidecar's headers; it just serves whoever reaches the viewer port. That is safe only because the viewer port is unpublished.
+- The app trusts nothing from the sidecar's headers; it just serves whoever reaches the viewer port. That keeps it off the host and the LAN because the viewer port is unpublished. Other containers on the flat `docker-infra` network can still reach it; David accepted that for v1 (read-only pages), and `add-lisa-image-upload` closes it before adding writes.
 
 **Verify early: iOS standalone with the sidecar login.** This is a verification, not a gate: no page or route depends on its outcome, because the fallback needs no app code. It runs early only so a fallback is known before the phone instructions are written.
 

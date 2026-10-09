@@ -35,7 +35,7 @@ Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the
 
 - `image: ghcr.io/davidwinterbottom-2/meal-planner:${IMAGE_TAG:-latest}`, `TZ=Europe/Zurich`, `MEALS_DB=/data/meals.db`.
 - Volume `${MEALS_DATA_PATH:-./data}:/data`. The image runs as the non-root `node` user (uid 1000), so the host directory must be owned by uid 1000 (`make install` creates it with `install -d -o 1000 -g 1000`); otherwise SQLite fails to open the database on first start.
-- Joins the `docker-infra` network so `http://flatnotes:8080` resolves.
+- Joins the `docker-infra` network so Apache reaches it by name. It makes no outbound calls to other services (no Flatnotes).
 - Log rotation as in the other services.
 
 **Apache.** In the `mcp.winterbottom.xyz` :443 vhost, add these next to the chores lines:
@@ -43,7 +43,7 @@ Host ports 8090–8098 and 8100 are taken. The Apache container is itself on the
 - `ProxyPass /.well-known/oauth-authorization-server/meals http://meal-planner:3000/.well-known/oauth-authorization-server disablereuse=On`
 - `ProxyPass /meals/ http://meal-planner:3000/ disablereuse=On` and the matching `ProxyPassReverse`.
 
-**No host port for the app.** The app `expose`s 3000 on `docker-infra` and publishes nothing; Apache proxies to it by container name. This departs from the other MCP services, which use `host.docker.internal:<port>`, for two reasons. It satisfies §H3, and it means only Apache can reach the app, which is what `trust proxy: 1` relies on. **[Open, architecture review finding 1]** The `docker-infra` network is flat, so every other container on it can also reach `meal-planner:3000`. "Only Apache" holds for the host and the LAN, not for neighbouring containers; the decision on how to close that is pending with David. _Alternative:_ publish `8099` bound to the Docker bridge only. Rejected: it still opens a host port, and it depends on the bridge address.
+**No host port for the app.** The app `expose`s 3000 on `docker-infra` and publishes nothing; Apache proxies to it by container name. This departs from the other MCP services, which use `host.docker.internal:<port>`, for two reasons. It satisfies §H3, and it means only Apache can reach the app, which is what `trust proxy: 1` relies on. **Accepted for v1 (David, 2026-10-09; architecture review finding 1).** The `docker-infra` network is flat, so every other container on it can also reach `meal-planner:3000`, and later the viewer's `:3001`. "Only Apache" holds for the host and the LAN, not for neighbouring containers. Accepted because the MCP port still requires auth, the viewer is read-only, and the neighbours are David's own services; a neighbour could spoof `X-Forwarded-For` only to dodge the OAuth rate limits. **Revisit before `add-lisa-image-upload`**, which adds a write path to the viewer: put the app and sidecar on a private network and bind the viewer listener only there. _Alternative:_ publish `8099` bound to the Docker bridge only. Rejected: it still opens a host port, and it depends on the bridge address.
 
 **Authentication of the MCP surface (HOSTING-SECURITY §H2).** §H2 makes Microsoft Entra the one identity provider, but claude.ai's custom connectors can only do dynamic client registration plus PKCE, which Entra doesn't offer them. The MCP surface therefore uses the shared OAuth module (`auth: "mcp"`, already in the §H2 vocabulary for exactly this reason), gated by the approval password and `x-api-key`. It is the same mechanism as every other MCP server on `mcp.winterbottom.xyz`.
 

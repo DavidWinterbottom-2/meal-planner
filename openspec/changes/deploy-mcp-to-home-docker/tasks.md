@@ -20,11 +20,11 @@
 
 ## 4. Go live (on the Pi, with David)
 
-- [ ] 4.1 Create `.env` on the Pi (generate `MCP_API_KEY`, `OAUTH_CLIENT_ID/SECRET`, `OAUTH_APPROVAL_PASSWORD`; add the Flatnotes credentials) and save it to Bitwarden as **Meal Planner .env**. Run `make install` and reload Apache. Verify that `https://mcp.winterbottom.xyz/meals/health` returns 200 and that `/meals/mcp` returns 401 without credentials
+- [ ] 4.1 Create `.env` on the Pi (generate `MCP_API_KEY`, `OAUTH_CLIENT_ID/SECRET`, `OAUTH_APPROVAL_PASSWORD`) and save it to Bitwarden as **Meal Planner .env**. Run `make install` and reload Apache. Verify that `https://mcp.winterbottom.xyz/meals/health` returns 200 and that `/meals/mcp` returns 401 without credentials
 - [ ] 4.1a Recreate the app container without touching Apache (`docker compose up -d --force-recreate meal-planner`), and confirm it came back on a different address or note that it didn't (`docker inspect`). Verify that `https://mcp.winterbottom.xyz/meals/health` returns 200 straight afterwards, with no Apache reload. If it returns 502, either pin the container's address on `docker-infra` or switch to the bridge-bound port with a recorded §H3 exception, update the design, and re-run this check
 - [ ] 4.1b Redeploy (`docker compose up -d --force-recreate meal-planner`) after the connector is added in 4.3, and confirm that claude.ai then needs re-authorising, as the design expects for in-memory OAuth state. Verify that re-authorising works and record the steps in the README
 - [ ] 4.2 Seed the Flatnotes rule notes by pasting `docs/seed-flatnotes-rules.md` into a Claude chat. Verify that the 4 notes exist in Flatnotes with the expected titles
-- [ ] 4.3 Add the claude.ai custom connector `https://mcp.winterbottom.xyz/meals/mcp`, approving with the approval password. Verify in a claude.ai chat that `get_planning_context` returns the rules, the two seeded weeks and next Monday 2026-10-19 (or later)
+- [ ] 4.3 Add the claude.ai custom connector `https://mcp.winterbottom.xyz/meals/mcp`, approving with the approval password. Verify in a claude.ai chat (with the Flatnotes connector also enabled) that `get_planning_context` returns the 4 rule-note titles and Claude then reads them with the Flatnotes connector, and returns the two seeded weeks and next Monday 2026-10-19 (or later)
 - [ ] 4.4 Run MCP Inspector against production with `x-api-key`: `get_planning_context`, `save_week_plan` on a scratch future week, `get_week_plan("current")`, `update_day`, then `undo_last_change` until the scratch week is gone. Verify the results and record them in the docker-infra PR
 
 ## Workflow follow-up
