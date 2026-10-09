@@ -6,18 +6,18 @@ This is a greenfield repo rendered from the devcontainer-sandbox copier template
 
 The grill-me session (2026-10-08) settled the decisions below. They override the original brief:
 
-| Topic         | Decision                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| Hosting       | One container on the Pi; viewer at `meals.winterbottom.xyz`, MCP at `mcp.winterbottom.xyz/meals/mcp` |
-| Web auth      | Entra (`entra-app`), David only, 1-year session (add-week-viewer)                                    |
-| Rules         | 4 Flatnotes notes, read-only here; `rules` table dropped                                             |
-| Clashes       | One plan per week; save overwrites with no warning                                                   |
-| Undo          | Append-only history plus `undo_last_change`                                                          |
-| Kita          | Claude writes it; no auto-fill                                                                       |
-| Current week  | Strictly Mon–Sun, Europe/Zurich                                                                      |
-| Sharing       | PNG image, no public links; `get_week_links` dropped                                                 |
-| Lisa's images | Route 1 (Claude transcribes from chat) now; upload route gated on a spike                            |
-| Backup        | Deferred                                                                                             |
+| Topic         | Decision                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| Hosting       | One container on the Pi; viewer at `meals.winterbottom.xyz`, MCP at `mcp.winterbottom.xyz/meals/mcp`   |
+| Web auth      | Entra via the `entra-auth-proxy` sidecar (`entra-proxy`), David only, 1-year session (add-week-viewer) |
+| Rules         | 4 Flatnotes notes, read-only here; `rules` table dropped                                               |
+| Clashes       | One plan per week; save overwrites with no warning                                                     |
+| Undo          | Append-only history plus `undo_last_change`                                                            |
+| Kita          | Claude writes it; no auto-fill                                                                         |
+| Current week  | Strictly Mon–Sun, Europe/Zurich                                                                        |
+| Sharing       | PNG image, no public links; `get_week_links` dropped                                                   |
+| Lisa's images | Route 1 (Claude transcribes from chat) now; upload route gated on a spike                              |
+| Backup        | Deferred                                                                                               |
 
 ## Goals / Non-Goals
 

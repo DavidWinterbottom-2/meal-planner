@@ -3,33 +3,35 @@
 ## 1. Infra for the viewer host
 
 - [ ] 1.1 Create `meals.winterbottom.xyz` with the `cloudflare-dns` skill. Verify that `dig meals.winterbottom.xyz` resolves to the Pi
-- [ ] 1.2 Register the Entra app with the `entra-app-registration` skill (redirect `https://meals.winterbottom.xyz/auth/callback`, `ALLOWED_EMAILS` = David only). Verify that the env values are in the Pi `.env` and Bitwarden
-- [ ] 1.3 In docker-infra, add the `meals.winterbottom.xyz` :80/:443 vhost proxying to 8099, with `Require all denied` on `/mcp`, `/oauth/` and `/.well-known/oauth-`, and add the Entra env vars to the compose file. Verify that `httpd -t` passes and that `https://meals.winterbottom.xyz/mcp` returns 403
+- [ ] 1.2 Register an Entra app for the sidecar (redirect `https://meals.winterbottom.xyz/oauth2/callback`), following how Hermes' `entra-auth-proxy` app is set up. Verify that the client ID, secret and a new cookie secret (`openssl rand -base64 32 | tr -- '+/' '-_'`) are in the Pi `.env` and Bitwarden
+- [ ] 1.3 In docker-infra's meal-planner service, add the `entra-auth-proxy` sidecar, copying Hermes' block. Settings: upstream `http://meal-planner:3001`, the redirect URL, an authenticated-emails file mounted with David's address only, `COOKIE_EXPIRE=8760h`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=lax`, and skip-auth routes for the manifest and icons. Publish only the sidecar's port, on the next free host port, and `expose` 3001 on the app without publishing it. Verify that `docker compose config` parses and that port 3001 is not published on the host
+- [ ] 1.4 Add the `meals.winterbottom.xyz` :80/:443 vhost proxying to the sidecar's port. Verify that `httpd -t` passes
 
-## 2. Spike: Entra login in a home-screen app
+## 2. Viewer listener and spike: login in a home-screen app
 
-- [ ] 2.1 Implement the signed sliding-session cookie helpers (`sign`, `verify`, `refresh`, 1-year sliding, `Secure`/`HttpOnly`/`SameSite=Lax`). Verify unit tests for tamper rejection, expiry and daily refresh
-- [ ] 2.2 Implement the OIDC login (`/login`, `/auth/callback`, `/logout`, allow-list check, return-to URL) and startup config validation (fail closed, `AUTH_DISABLED`). Verify unit tests for the allow-list (case-insensitive), the 403 path, and a missing-setting startup error
-- [ ] 2.3 Serve a stub protected `/` page and the manifest and icons, then deploy. Verify on iPhone and Android that install to home screen → login → return into the standalone app works, and that it stays logged in after closing the app, restarting the phone and restarting the container. Record the outcome in `docs/spikes/ios-standalone-login.md`
+- [ ] 2.1 Add the viewer listener: a second Express app on `VIEWER_PORT` (default 3001) in the same process, serving only viewer routes and static files. The MCP listener keeps only `/mcp`, `/oauth/*`, `/.well-known/*` and `/health`. Verify route tests that the MCP listener returns 404 for `/week/...` and `/history`, and that the viewer listener returns 404 for `/mcp` and `/oauth/register`
+- [ ] 2.2 Serve a stub `/` page, the manifest and the icons on the viewer listener, then deploy with the sidecar. Verify on iPhone and Android:
+  - install to home screen → login → return into the standalone app works
+  - it stays logged in after closing the app, after restarting the phone, after restarting the containers, and after more than 2 hours idle
+  - a second Microsoft account in the tenant is refused
+  - `https://mcp.winterbottom.xyz/meals/week/2026-10-12` is not served
 
-## 3. Fallback: device pairing (only if 2.3 fails on iOS)
+  Record the outcome in `docs/spikes/ios-standalone-login.md`. If the idle session expires early, enable cookie refresh with `offline_access` and re-check. If iOS standalone login fails outright, use the Safari-bookmark fallback from the design and say so in the README
 
-- [ ] 3.1 Implement `/pair` (shows a one-time 6-digit code, 5 minute TTL, after login in Safari) and `/pair/enter` (the standalone app exchanges the code for the session cookie), with codes single-use and rate-limited. Verify unit tests for expiry, reuse and brute-force limits, and repeat the 2.3 phone checks
+## 3. Viewer pages
 
-## 4. Viewer pages
+- [ ] 3.1 Vendor the design system with the `design-system-sync` skill. Verify that the vendored files match `docker-infra/design-system`
+- [ ] 3.2 Implement `buildWeekView(week, today)`: heading text, relative badge, today flag, Kita label, source label, empty state. Verify unit tests for each week-viewer scenario (badge values, Sunday, Kita, source, empty)
+- [ ] 3.3 Implement the `/`, `/week/:date` (redirect to Monday, 404 for invalid) and `/history` routes, the HTML renderers, and a sign-out link to the sidecar's `/oauth2/sign_out`. Verify route tests on the viewer listener with seeded data
+- [ ] 3.4 Add the swipe script (|dx| > 60px and > 2·|dy|) and Prev, This week and Next links. Verify a unit test of the gesture classifier and a manual check on phone
+- [ ] 3.5 Style the day rows (prominent dinner, smaller lunch and snacks, italic notes, today highlight), the prep block, light and dark themes. Verify no horizontal scroll at 390px (Playwright screenshot in both themes, attached to the PR)
+- [ ] 3.6 Add the manifest (`standalone`, `start_url: /`, a 180px Apple touch icon, a 512px icon) under the paths the sidecar lets through without login. Verify that the manifest test passes and Chrome DevTools reports it installable
 
-- [ ] 4.1 Vendor the design system with the `design-system-sync` skill. Verify that the vendored files match `docker-infra/design-system`
-- [ ] 4.2 Implement `buildWeekView(week, today)`: heading text, relative badge, today flag, Kita label, source label, empty state. Verify unit tests for each week-viewer scenario (badge values, Sunday, Kita, source, empty)
-- [ ] 4.3 Implement the `/`, `/week/:date` (redirect to Monday, 404 for invalid) and `/history` routes, and the HTML renderers. Verify route tests on an ephemeral port with `AUTH_DISABLED` and seeded data
-- [ ] 4.4 Add the swipe script (|dx| > 60px and > 2·|dy|) and Prev, This week and Next links. Verify a unit test of the gesture classifier and a manual check on phone
-- [ ] 4.5 Style the day rows (prominent dinner, smaller lunch and snacks, italic notes, today highlight), the prep block, light and dark themes. Verify no horizontal scroll at 390px (Playwright screenshot in both themes, attached to the PR)
-- [ ] 4.6 Add the manifest (`standalone`, `start_url: /`, a 180px Apple touch icon, a 512px icon). Verify that the manifest test passes and Chrome DevTools reports it installable
+## 4. Registration, docs and release
 
-## 5. Registration, docs and release
-
-- [ ] 5.1 In docker-infra, update the tools-index entry to `match: "meals.winterbottom.xyz"`, `auth: "entra-app"`, update the tools-page card, and the service README (both hosts, auth per surface). Verify that all three docker-infra checks pass
-- [ ] 5.2 Update the README for the viewer URL, phone install steps and auth env vars. Verify that the steps match the spike outcome
-- [ ] 5.3 `npm version minor`, then verify that `npm run lint` and `npm test` (coverage ≥80%) pass
+- [ ] 4.1 In docker-infra, update the tools-index entry to `match: "meals.winterbottom.xyz"`, `auth: "entra-proxy"`, update the tools-page card, and the service README (both hosts, auth per surface, the sidecar). Verify that all three docker-infra checks pass
+- [ ] 4.2 Update the README for the viewer URL, phone install steps, `VIEWER_PORT`, and how login works (the sidecar, not the app). Verify that the steps match the spike outcome
+- [ ] 4.3 `npm version minor`, then verify that `npm run lint` and `npm test` (coverage ≥80%) pass
 
 ## Workflow follow-up
 

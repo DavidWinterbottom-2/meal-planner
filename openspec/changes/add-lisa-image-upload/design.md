@@ -34,7 +34,7 @@ The brief asked to "test early whether image content returned by an MCP tool rea
 
 **MCP image size.** Claude downsamples large images. Before base64-encoding, the image is re-sized so its long edge is at most 1568px, which keeps the tool result small.
 
-**Upload transport.** `multer` with in-memory storage, a 15 MB limit and a MIME and magic-byte check, followed by sharp. Only the logged-in user can reach it (viewer auth, plus a same-origin check on POST).
+**Upload transport.** `multer` with in-memory storage, a 15 MB limit and a MIME and magic-byte check, followed by sharp. Only the logged-in user can reach it (viewer listener behind the login sidecar, plus a same-origin check on POST).
 
 ## Risks / Trade-offs
 

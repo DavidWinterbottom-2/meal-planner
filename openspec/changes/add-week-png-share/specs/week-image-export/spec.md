@@ -49,7 +49,7 @@ A week's PNG SHALL be reused until the week is changed (saved, updated, deleted 
 
 ### Requirement: PNG requires login
 
-The PNG route SHALL follow the same viewer authentication as the week pages.
+The PNG route SHALL be served only where the week pages are, behind the same viewer login.
 
 #### Scenario: Anonymous PNG request
 
