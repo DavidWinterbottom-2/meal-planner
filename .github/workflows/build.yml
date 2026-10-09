@@ -31,8 +31,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Anonymous Docker Hub pulls from shared runners hit its rate limit
+      # (the first run failed pulling tonistiigi/binfmt). Every image this job
+      # needs from Docker Hub comes through Google's mirror instead: QEMU's
+      # binfmt image, BuildKit itself, and (via the registry mirror) the
+      # Dockerfile's node base image.
       - uses: docker/setup-qemu-action@v3
+        with:
+          image: mirror.gcr.io/tonistiigi/binfmt:latest
       - uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
 
       - name: Read version
         id: version

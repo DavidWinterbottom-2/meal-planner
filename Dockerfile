@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Meal Planner: MCP server (and, from add-week-viewer, the phone viewer).
 # Built for linux/arm64 (the Pi) by .github/workflows/build.yml.
 
