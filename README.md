@@ -82,6 +82,44 @@ npx @modelcontextprotocol/inspector --cli http://localhost:3000/mcp \
 Every setting is documented in [`.env.example`](.env.example). On the Pi, the
 whole `.env` is stored in Bitwarden as **Meal Planner .env**.
 
+## Image and deployment
+
+The image is built for `linux/arm64` (the Pi) by
+[`.github/workflows/build.yml`](.github/workflows/build.yml):
+
+- Every PR that touches the image builds it and runs
+  [`scripts/smoke-image.sh`](scripts/smoke-image.sh) on it under QEMU. This
+  checks health, auth on `/mcp`, the generic error body, a tool call, the
+  non-root user and the `HEALTHCHECK`.
+- A push to `main` also publishes
+  `ghcr.io/davidwinterbottom-2/meal-planner` as `latest`, the `package.json`
+  version, and `sha-<short commit>`.
+
+To run the image locally (any platform Docker can emulate):
+
+```bash
+docker build -t meal-planner .
+scripts/smoke-image.sh meal-planner
+```
+
+The image runs as the unprivileged `node` user (uid 1000) with
+`NODE_ENV=production`, publishes no host port of its own, and keeps its
+database in `/data`. A host directory mounted there must be owned by uid 1000,
+or the app exits with `unable to open database file`.
+
+It is deployed on the Pi by the docker-infra service
+[`home-docker/services/meal-planner`](https://github.com/DavidWinterbottom-2/docker-infra/tree/main/home-docker/services/meal-planner)
+(compose, `.env`, Apache lines, and the go-live and rollback steps).
+Apache on `mcp.winterbottom.xyz` proxies `/meals/` to the container by name
+over the `docker-infra` network. To roll back, set `IMAGE_TAG` to an earlier
+`sha-…` tag in that service's `.env` and recreate the container.
+
+**After every redeploy, reconnect Claude.** The shared OAuth module keeps
+connector registrations and tokens in memory, so a new container forgets them.
+In claude.ai: Settings → Connectors → Meal Planner → Disconnect, then Connect,
+and enter the approval password. `x-api-key` access (Claude Code, MCP
+Inspector) is unaffected.
+
 ## Data and backups
 
 All data lives in one SQLite file (`MEALS_DB`, default `/data/meals.db`):
@@ -90,8 +128,9 @@ JSON of every change.
 
 > **Known gap — no backups yet.** The database sits on the Pi's volume with no
 > automated copy. A lost SD card loses all meal history. Until a backup job
-> exists, take a consistent copy by hand:
-> `sqlite3 /data/meals.db ".backup '/path/meals-$(date +%F).db'"`.
+> exists, take a consistent copy by hand on the Pi (`sqlite3` on the host,
+> against the service's data directory):
+> `sqlite3 data/meals.db ".backup 'meals-$(date +%F).db'"`.
 
 ## Shared OAuth code
 
@@ -130,6 +169,10 @@ Code and architecture reviews are recorded in
 [`docs/reviews/LOG.md`](docs/reviews/LOG.md) (§9).
 
 ## Updates
+
+### 2026-10 — container image
+
+- arm64 image for the Pi, built and smoke-tested in CI, published to GHCR.
 
 ### 2026-10 — data store and MCP server
 
