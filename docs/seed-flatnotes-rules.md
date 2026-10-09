@@ -1,7 +1,8 @@
 # Seed the meal-planning rules into Flatnotes
 
-The Meal Planner reads its planning rules from four Flatnotes notes. It never
-writes them: you edit them with the Flatnotes connector in Claude. Run this
+The planning rules live in four Flatnotes notes. The Meal Planner never reads
+or writes them: it tells Claude their titles, and Claude reads and edits them
+with the Flatnotes connector. Run this
 once, in a claude.ai chat with the **Flatnotes** connector enabled, by pasting
 everything below the line.
 

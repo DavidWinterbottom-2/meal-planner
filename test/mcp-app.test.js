@@ -19,8 +19,7 @@ beforeAll(async () => {
     OAUTH_APPROVAL_PASSWORD: APPROVAL,
     BASE_URL: "http://test",
   });
-  const loadRules = async () => ({ sections: {}, missing: [], error: null });
-  const app = createMcpApp({ store, loadRules, config, now: () => NOW });
+  const app = createMcpApp({ store, config, now: () => NOW });
   await new Promise((resolve) => {
     server = app.listen(0, "127.0.0.1", resolve);
   });
@@ -215,9 +214,9 @@ describe("readConfig", () => {
       baseUrl: "https://mcp.winterbottom.xyz/meals",
       dbPath: "/data/meals.db",
       oauth: { tokenTtlHours: 168, approvalPassword: undefined },
-      flatnotes: { url: "http://flatnotes:8080", username: "" },
     });
-    expect(c.flatnotes.titles.household).toBe("Meals - Household");
+    expect(c.ruleNotes.household).toBe("Meals - Household");
+    expect(c).not.toHaveProperty("flatnotes");
     expect(readConfig({ MCP_API_KEY: KEY }).baseUrl).toBe(
       "http://localhost:3000",
     );

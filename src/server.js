@@ -1,11 +1,10 @@
-// Composition root: wires config, store, rules client and the HTTP
+// Composition root: wires config, store and the HTTP
 // listeners together. Every listener goes in `servers`, so stop() closes
 // them all before the store — the viewer listener (add-week-viewer) joins
 // this list rather than getting its own shutdown path.
 
 import { readConfig } from "./config.js";
 import { openStore } from "./store.js";
-import { createRulesClient } from "./flatnotes.js";
 import { seedIfEmpty } from "./seed/weeks.js";
 import { createMcpApp } from "./mcp-app.js";
 
@@ -33,15 +32,10 @@ export async function startServer({
   const seeded = seedIfEmpty(store, now().toISOString());
   if (seeded) log(`Seeded ${seeded} example weeks into an empty database`);
 
-  const { loadRules } = createRulesClient(config.flatnotes);
   const servers = [];
   try {
     servers.push(
-      await listen(
-        createMcpApp({ store, loadRules, config, now }),
-        config.port,
-        host,
-      ),
+      await listen(createMcpApp({ store, config, now }), config.port, host),
     );
   } catch (e) {
     await Promise.all(servers.map(close));

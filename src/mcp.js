@@ -48,13 +48,14 @@ const dayFields = {
 
 const PLANNING_CONTEXT_DESCRIPTION = [
   "ALWAYS call this first whenever planning meals (e.g. 'plan the next 2 weeks'), before drafting anything.",
-  "Returns, in one bundle: the household rules, meal bank, recipes and pantry (markdown, from Flatnotes);",
+  "Returns, in one bundle: the titles of the four Flatnotes notes holding the household rules, meal bank, recipes and pantry (rule_notes);",
   "the most recent stored weeks up to and including this week (weeks_back of them, default 6), in full, so new plans build on what we ate recently;",
   "any weeks already planned after this week; weeks that are only an image (status image_only) and need",
   "transcribing; and the next Monday with no plan yet.",
+  "Next, read every note in rule_notes with the Flatnotes connector (get_note); do not draft a plan",
+  "without the household rules. If a note can't be read, tell David which one before planning.",
   "Then check the Cozi calendar for the planning window, draft the plan in chat, iterate with David,",
-  "and only call save_week_plan once he agrees. If rules_status says rules are unavailable, read the",
-  "notes with the Flatnotes connector instead.",
+  "and only call save_week_plan once he agrees.",
 ].join(" ");
 
 const ok = (summary, data) => ({
@@ -96,13 +97,8 @@ export function formatWeekText(week) {
   return [header, ...lines, ...extra].join("\n");
 }
 
-// Build the get_planning_context bundle. Pure apart from the injected store and rules.
-export async function buildPlanningContext({
-  store,
-  loadRules,
-  today,
-  weeksBack,
-}) {
+// Build the get_planning_context bundle. Pure apart from the injected store.
+export function buildPlanningContext({ store, ruleNotes, today, weeksBack }) {
   const currentMonday = weekOf(today);
   const weeks = store.listWeeks();
   const recent = weeks
@@ -113,18 +109,11 @@ export async function buildPlanningContext({
     .filter((w) => w.week_start > currentMonday)
     .reverse()
     .map((w) => store.getWeek(w.week_start));
-  const rules = await loadRules();
-  const rulesStatus = rules.error
-    ? `Rules unavailable (${rules.error}). Read the notes with the Flatnotes connector instead.`
-    : rules.missing.length
-      ? `Missing rule notes: ${rules.missing.join(", ")}. The other sections are included.`
-      : "All rule sections loaded.";
   return {
     today,
     current_week: currentMonday,
     next_unplanned_monday: store.nextUnplannedMonday(currentMonday),
-    rules_status: rulesStatus,
-    rules: rules.sections,
+    rule_notes: ruleNotes,
     image_only_weeks: weeks
       .filter((w) => w.status === "image_only")
       .map((w) => w.week_start),
@@ -133,8 +122,9 @@ export async function buildPlanningContext({
   };
 }
 
-// `now` is injected so tests can fix "today"; `loadRules` comes from the Flatnotes client.
-export function createMcpServer({ store, loadRules, now = () => new Date() }) {
+// `now` is injected so tests can fix "today"; `ruleNotes` maps each rules
+// section to its Flatnotes note title (see rules.js).
+export function createMcpServer({ store, ruleNotes, now = () => new Date() }) {
   const server = new McpServer({ name: "meal-planner", version: APP_VERSION });
   const stamp = () => now().toISOString();
 
@@ -156,15 +146,15 @@ export function createMcpServer({ store, loadRules, now = () => new Date() }) {
       },
     },
     guarded(async ({ weeks_back }) => {
-      const ctx = await buildPlanningContext({
+      const ctx = buildPlanningContext({
         store,
-        loadRules,
+        ruleNotes,
         today: zurichToday(now()),
         weeksBack: weeks_back ?? 6,
       });
       const summary = [
         `Today is ${ctx.today}. Next unplanned Monday: ${ctx.next_unplanned_monday}.`,
-        ctx.rules_status,
+        `Read these Flatnotes notes before planning: ${Object.values(ctx.rule_notes).join(", ")}.`,
         `${ctx.recent_weeks.length} recent week(s), ${ctx.upcoming_weeks.length} already planned ahead.`,
         ctx.image_only_weeks.length
           ? `Image-only weeks needing transcription: ${ctx.image_only_weeks.join(", ")}.`

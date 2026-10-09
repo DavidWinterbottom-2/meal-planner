@@ -10,16 +10,21 @@ import { openStore } from "../src/store.js";
 import { seedIfEmpty } from "../src/seed/weeks.js";
 
 const NOW = new Date("2026-10-15T10:00:00Z"); // Thursday of the 2026-10-12 week
-const allRules = async () => ({
-  sections: { household: "H", meal_bank: "M", recipes: "R", pantry: "P" },
-  missing: [],
-  error: null,
-});
+const RULE_NOTES = {
+  household: "Meals - Household",
+  meal_bank: "Meals - Meal Bank",
+  recipes: "Meals - Recipes",
+  pantry: "Meals - Pantry",
+};
 
 let store, client;
 
-async function connect(loadRules = allRules) {
-  const server = createMcpServer({ store, loadRules, now: () => NOW });
+async function connect() {
+  const server = createMcpServer({
+    store,
+    ruleNotes: RULE_NOTES,
+    now: () => NOW,
+  });
   const [a, b] = InMemoryTransport.createLinkedPair();
   await server.connect(a);
   client = new Client({ name: "test", version: "0" });
@@ -81,19 +86,20 @@ describe("tool list", () => {
       (t) => t.name === "get_planning_context",
     ).description;
     expect(desc).toMatch(/call this first whenever planning meals/i);
+    expect(desc).toMatch(
+      /read every note in rule_notes with the Flatnotes connector/,
+    );
   });
 });
 
 describe("get_planning_context", () => {
-  test("bundles rules, recent and upcoming weeks, and the next unplanned Monday", async () => {
+  test("bundles the rule note titles, recent and upcoming weeks, and the next unplanned Monday", async () => {
     const { data, text } = await call("get_planning_context");
-    expect(data.rules).toEqual({
-      household: "H",
-      meal_bank: "M",
-      recipes: "R",
-      pantry: "P",
-    });
-    expect(data.rules_status).toBe("All rule sections loaded.");
+    expect(data.rule_notes).toEqual(RULE_NOTES);
+    expect(data).not.toHaveProperty("rules");
+    expect(text).toMatch(
+      /Read these Flatnotes notes before planning: Meals - Household, Meals - Meal Bank, Meals - Recipes, Meals - Pantry\./,
+    );
     expect(data.current_week).toBe("2026-10-12");
     expect(data.recent_weeks.map((w) => w.week_start)).toEqual([
       "2026-10-12",
@@ -111,46 +117,13 @@ describe("get_planning_context", () => {
     expect(data.recent_weeks.map((w) => w.week_start)).toEqual(["2026-10-12"]);
   });
 
-  test("still succeeds when Flatnotes is down, and says so", async () => {
-    await client.close();
-    await connect(async () => ({
-      sections: {
-        household: null,
-        meal_bank: null,
-        recipes: null,
-        pantry: null,
-      },
-      missing: ["household", "meal_bank", "recipes", "pantry"],
-      error: "Flatnotes unreachable: fetch failed",
-    }));
-    const { data, isError } = await call("get_planning_context");
-    expect(isError).toBe(false);
-    expect(data.rules_status).toMatch(
-      /Rules unavailable .* Flatnotes connector/,
-    );
-    expect(data.next_unplanned_monday).toBe("2026-10-19");
-  });
-
-  test("names a single missing rule note", async () => {
-    await client.close();
-    await connect(async () => ({
-      sections: { household: "H", meal_bank: "M", recipes: null, pantry: "P" },
-      missing: ["recipes"],
-      error: null,
-    }));
-    const { data } = await call("get_planning_context");
-    expect(data.rules_status).toBe(
-      "Missing rule notes: recipes. The other sections are included.",
-    );
-  });
-
   test("lists already-planned future weeks oldest first", async () => {
     const days = [];
     store.saveWeek({ week_start: "2026-10-26", source: "David", days }, "t");
     store.saveWeek({ week_start: "2026-10-19", source: "Lisa", days }, "t");
-    const ctx = await buildPlanningContext({
+    const ctx = buildPlanningContext({
       store,
-      loadRules: allRules,
+      ruleNotes: RULE_NOTES,
       today: "2026-10-15",
       weeksBack: 6,
     });
@@ -374,7 +347,7 @@ describe("review follow-ups", () => {
     await client.close();
     const server = createMcpServer({
       store,
-      loadRules: allRules,
+      ruleNotes: RULE_NOTES,
       now: () => new Date("2026-10-18T23:30:00Z"), // already Monday 19 Oct in Zurich
     });
     const [a, b] = InMemoryTransport.createLinkedPair();

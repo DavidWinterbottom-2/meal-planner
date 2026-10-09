@@ -6,12 +6,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { installOAuth2AuthorizationServer } from "./vendor/oauth2-authorization-server.js";
 import { createMcpServer } from "./mcp.js";
 
-export function createMcpApp({
-  store,
-  loadRules,
-  config,
-  now = () => new Date(),
-}) {
+export function createMcpApp({ store, config, now = () => new Date() }) {
   const app = express();
   // Exactly one proxy (the Pi's Apache) sits in front, so req.ip is the
   // address Apache appended to X-Forwarded-For. Used by the OAuth module's
@@ -44,7 +39,11 @@ export function createMcpApp({
         sessionIdGenerator: undefined,
       });
       res.on("close", () => transport.close());
-      await createMcpServer({ store, loadRules, now }).connect(transport);
+      await createMcpServer({
+        store,
+        ruleNotes: config.ruleNotes,
+        now,
+      }).connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (e) {
       console.error("MCP request failed:", e);

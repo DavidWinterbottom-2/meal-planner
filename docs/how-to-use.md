@@ -12,11 +12,12 @@ Flatnotes; the meal plans live in the Meal Planner.
 
 **"Plan the next 2 weeks"**
 
-1. Call `get_planning_context` first. It returns our household rules, meal
-   bank, recipes and pantry, the recent weeks, any weeks already planned
-   ahead, and the next Monday with no plan.
-2. If its `rules_status` says the rules are unavailable, read the four
-   `Meals - …` notes with the Flatnotes connector instead.
+1. Call `get_planning_context` first. It returns the recent weeks, any weeks
+   already planned ahead, the next Monday with no plan, and the titles of
+   the four rule notes (`rule_notes`).
+2. Read every note in `rule_notes` with the Flatnotes connector: household
+   rules, meal bank, recipes and pantry. If one can't be read, tell me which
+   before planning.
 3. Check the Cozi calendar for those two weeks: evenings out, trips, visitors.
 4. Draft the two weeks in chat as a table (Day | Lunch | Snacks | Dinner |
    Notes), plus a prep list. Follow the household rules: Mon–Wed lunch is

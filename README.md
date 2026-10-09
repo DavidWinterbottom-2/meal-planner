@@ -20,15 +20,15 @@ and any change can be undone.
   `OAUTH_APPROVAL_PASSWORD`. Without that password nobody can approve a
   connection.
 
-| Tool                                                        | What it does                                                                                                                                                                                                            |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_planning_context(weeks_back=6)`                        | Claude calls this first when planning. Returns the household rules, meal bank, recipes and pantry (from Flatnotes), recent weeks in full, weeks already planned ahead, image-only weeks, and the next unplanned Monday. |
-| `save_week_plan(week_start, source, days[], prep?, notes?)` | Create or replace one week. `week_start` must be a Monday; every day must fall inside that week. A 2-week plan is 2 calls.                                                                                              |
-| `update_day(date, fields)`                                  | Change some fields of one day; everything else stays.                                                                                                                                                                   |
-| `get_week_plan(week)`                                       | A Monday, or `current` / `next` / `previous`. Returns all seven days.                                                                                                                                                   |
-| `list_weeks(from?, to?)`                                    | Weeks newest first, with source, status and a one-line dinner summary.                                                                                                                                                  |
-| `delete_week(week_start)`                                   | Delete a week (undoable).                                                                                                                                                                                               |
-| `undo_last_change()`                                        | Reverse the latest save, day edit or delete. Call again to step further back.                                                                                                                                           |
+| Tool                                                        | What it does                                                                                                                                                                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `get_planning_context(weeks_back=6)`                        | Claude calls this first when planning. Returns the titles of the four Flatnotes rule notes for Claude to read, recent weeks in full, weeks already planned ahead, image-only weeks, and the next unplanned Monday. |
+| `save_week_plan(week_start, source, days[], prep?, notes?)` | Create or replace one week. `week_start` must be a Monday; every day must fall inside that week. A 2-week plan is 2 calls.                                                                                         |
+| `update_day(date, fields)`                                  | Change some fields of one day; everything else stays.                                                                                                                                                              |
+| `get_week_plan(week)`                                       | A Monday, or `current` / `next` / `previous`. Returns all seven days.                                                                                                                                              |
+| `list_weeks(from?, to?)`                                    | Weeks newest first, with source, status and a one-line dinner summary.                                                                                                                                             |
+| `delete_week(week_start)`                                   | Delete a week (undoable).                                                                                                                                                                                          |
+| `undo_last_change()`                                        | Reverse the latest save, day edit or delete. Call again to step further back.                                                                                                                                      |
 
 Each day has `morning_snack`, `lunch`, `afternoon_snack`, `dinner` and `note`.
 Mon–Wed lunch is usually the literal `Kita`. Claude writes it in from the
@@ -37,10 +37,11 @@ household rules; the server never fills anything in.
 ### Planning rules live in Flatnotes
 
 The rules are four Flatnotes notes: `Meals - Household`, `Meals - Meal Bank`,
-`Meals - Recipes` and `Meals - Pantry`. This server only **reads** them, to
-build the `get_planning_context` bundle. To change a rule, ask Claude to edit
-the note with the Flatnotes connector. If Flatnotes is down or a note is
-missing, planning still works and the bundle says which rules are unavailable.
+`Meals - Recipes` and `Meals - Pantry`. This server never touches Flatnotes and
+holds no Flatnotes credentials: `get_planning_context` only names the notes, and
+Claude reads them with its own Flatnotes connector. So a planning chat needs
+both the Meal Planner and the Flatnotes connectors enabled. To change a rule,
+ask Claude to edit the note with the Flatnotes connector.
 
 To create the notes the first time, paste
 [`docs/seed-flatnotes-rules.md`](docs/seed-flatnotes-rules.md) into a Claude
@@ -134,7 +135,7 @@ Code and architecture reviews are recorded in
 
 - SQLite week/day store with an append-only history and `undo_last_change`.
 - MCP server with 7 tools, x-api-key and OAuth (approval password) auth.
-- Planning rules read from Flatnotes; the two example weeks are seeded on first start.
+- Planning rules named for Claude to read from Flatnotes (no Flatnotes credentials in this app); the two example weeks are seeded on first start.
 
 ### 2026 — created
 

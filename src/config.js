@@ -1,7 +1,7 @@
 // Read and check settings from the environment. Fails closed on anything the
 // MCP endpoint's security depends on.
 
-import { ruleTitlesFromEnv } from "./flatnotes.js";
+import { ruleTitlesFromEnv } from "./rules.js";
 
 export function readConfig(env) {
   const errors = [];
@@ -32,12 +32,7 @@ export function readConfig(env) {
       approvalPassword: env.OAUTH_APPROVAL_PASSWORD || undefined,
       tokenTtlHours,
     },
-    flatnotes: {
-      url: (env.FLATNOTES_URL || "http://flatnotes:8080").replace(/\/+$/, ""),
-      username: env.FLATNOTES_USER || "",
-      password: env.FLATNOTES_PASS || "",
-      titles: ruleTitlesFromEnv(env),
-    },
+    ruleNotes: ruleTitlesFromEnv(env),
   };
 }
 
