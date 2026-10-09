@@ -1,6 +1,6 @@
 {
   "name": "meal-planner",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Family meal planner: phone web viewer plus an MCP server so Claude can plan, save and read our weekly meal plans.",
   "private": true,
   "type": "module",
