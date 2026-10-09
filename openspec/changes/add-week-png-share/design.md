@@ -9,7 +9,7 @@ The original brief suggested a headless Chromium screenshot. The grill-me sessio
 **Goals:**
 
 - No browser.
-- Render in under 1 s on the Pi, cached afterwards.
+- Render in under 1 s on the Pi.
 - Text wraps correctly, and the image matches the design-system palette.
 
 **Non-Goals:**
@@ -29,7 +29,9 @@ The original brief suggested a headless Chromium screenshot. The grill-me sessio
 
 **The layout is a pure function.** `buildImageTree(view)` turns the week view model into satori's element tree, and is unit-testable without rendering. Rendering is a thin wrapper.
 
-**Cache.** An in-memory LRU (about 20 entries) keyed `${week_start}:${updated_at}`. Every write updates `updated_at`, so a stale key is never hit, and no explicit invalidation hook is needed. Deletes and undos change or remove the week, so there's nothing left to serve. A container restart simply re-renders.
+**No cache.** Render on every request. One user opens a few images a week, and a render under 1 s on the Pi is acceptable. A cache keyed on `updated_at` would also be wrong after an undo restores an older `updated_at`, so it would need a content hash; that complexity buys nothing at this traffic. Add one only if the measured render time says so.
+
+**Route order.** Register `GET /week/:date.png` before `GET /week/:date`, and have `/week/:date` reject anything that isn't `YYYY-MM-DD`, so `/week/2026-10-12.png` can never be read as a week page.
 
 **Share.** A small client script fetches the PNG as a Blob, builds a `File`, and if `navigator.canShare({files})` is true calls `navigator.share({files, title})`. Otherwise it triggers a download via an `<a download>`. The PNG fetch uses the session cookie (same origin).
 

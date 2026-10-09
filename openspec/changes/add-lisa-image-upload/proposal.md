@@ -36,4 +36,4 @@ None formally. The image behaviours that touch the viewer and the MCP tools are 
 
 - New dependencies: `sharp` (strip metadata, downscale, normalise to JPEG; prebuilt linux-arm64) and `multer` (multipart upload).
 - New `image` table, plus image files under `/data/images/` (same volume as the database).
-- Depends on all previous changes being archived.
+- The spike (tasks 1.x) depends only on `deploy-mcp-to-home-docker`, using a fixture PNG, so it can run straight after the MCP server is live and decide early whether this change happens at all. The rest depends on all previous changes being archived.

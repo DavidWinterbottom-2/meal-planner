@@ -38,14 +38,19 @@ In the image, a lunch of "Kita" SHALL read "Thomas at Kita". The Snacks column M
 - **WHEN** a day has morning snack "Fruit" and afternoon snack "Crackers + cheese"
 - **THEN** that row's Snacks cell shows both
 
-### Requirement: Cached until the week changes
+### Requirement: Always current
 
-A week's PNG SHALL be reused until the week is changed (saved, updated, deleted or undone). After a change, the next request MUST render fresh output.
+A week's PNG MUST always reflect the week as stored at the time of the request, including after a save, update, delete or undo.
 
-#### Scenario: Update invalidates
+#### Scenario: Update is reflected
 
 - **WHEN** the PNG for 2026-10-12 has been rendered, and then a dinner in that week is updated
 - **THEN** the next PNG request reflects the new dinner
+
+#### Scenario: Undo is reflected
+
+- **WHEN** the PNG for 2026-10-12 has been rendered, then a dinner is updated, then the change is undone
+- **THEN** the next PNG request shows the original dinner
 
 ### Requirement: PNG requires login
 
