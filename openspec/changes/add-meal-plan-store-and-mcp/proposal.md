@@ -9,9 +9,9 @@ David plans the family meals every two weeks with Claude, and the plans end up l
 - A SQLite store for weekly plans: `week` (Monday-keyed, source, status, prep, notes), `day` (morning snack, lunch, afternoon snack, dinner, note), and an append-only `history` log of every write.
 - Validation: `week_start` must be a Monday, and every day must fall inside that Mon–Sun week (Europe/Zurich).
 - An MCP server (StreamableHTTP at `/mcp`) with these tools:
-  - `get_planning_context(weeks_back=6)`: the 4 Flatnotes rule notes, the last N weeks, any `image_only` flags, and the next Monday with no plan. Its description tells Claude to call it first when planning.
+  - `get_planning_context(weeks_back=6)`: the titles of the 4 Flatnotes rule notes (for Claude to read with its Flatnotes connector), the last N weeks, any `image_only` flags, and the next Monday with no plan. Its description tells Claude to call it first when planning.
   - `save_week_plan`, `update_day`, `get_week_plan(week_start | current | next | previous)`, `list_weeks(from?, to?)`, `delete_week`, `undo_last_change`.
-- The planning rules are read from 4 fixed Flatnotes notes over the docker network, read-only. If Flatnotes is unavailable, planning continues without them and the response says so.
+- The planning rules live in 4 Flatnotes notes. The app never calls Flatnotes and holds no Flatnotes credentials; Claude reads the notes with its own connector.
 - Auth: the shared OAuth2 module vendored from `mcp-development/shared/` (only after its self-approval fix has merged) plus `x-api-key`.
 - The two example weeks from the brief (2026-10-05, 2026-10-12, source David) are seeded on first start into an empty database.
 - A paste-in Claude prompt (`docs/seed-flatnotes-rules.md`) that creates the 4 rule notes through the Flatnotes connector.
@@ -30,7 +30,7 @@ David plans the family meals every two weeks with Claude, and the plans end up l
 ### New Capabilities
 
 - `meal-plans`: weekly meal plan data. Week and day rules, week resolution (current, next, previous) in Europe/Zurich, the change history, and undo.
-- `planning-mcp`: the MCP tool surface Claude uses, its authentication, and the planning-context bundle including the Flatnotes rules.
+- `planning-mcp`: the MCP tool surface Claude uses, its authentication, and the planning-context bundle naming the Flatnotes rule notes.
 
 ### Modified Capabilities
 
@@ -39,5 +39,5 @@ None (greenfield).
 ## Impact
 
 - New code in `src/` (store, domain helpers, MCP server, HTTP host). New dependencies: `express`, `better-sqlite3`, `@modelcontextprotocol/sdk`, `zod`.
-- Reads Flatnotes at `http://flatnotes:8080` using Flatnotes credentials in this app's `.env`.
+- No Flatnotes dependency at runtime: no credentials and no network call.
 - **Depends on** the mcp-development fix that gates the OAuth consent page. Do not vendor the module before that merges.

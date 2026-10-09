@@ -36,31 +36,31 @@ The system SHALL serve an MCP server over StreamableHTTP at `/mcp` and a `/healt
 
 ### Requirement: Planning context tool
 
-`get_planning_context(weeks_back=6)` SHALL return one bundle with three parts: the household, meal-bank, recipes and pantry rules as markdown; the last `weeks_back` weeks with full data, with any `image_only` weeks flagged; and the next unplanned Monday. Its description MUST tell Claude to call it first whenever planning meals.
+`get_planning_context(weeks_back=6)` SHALL return one bundle with three parts: the titles of the 4 Flatnotes rule notes (`rule_notes`); the last `weeks_back` weeks with full data, with any `image_only` weeks flagged; and the next unplanned Monday. Its description MUST tell Claude to call it first whenever planning meals.
 
 #### Scenario: Bundle contents
 
 - **WHEN** `get_planning_context` is called with default arguments
-- **THEN** the result contains the 4 rule sections, up to 6 prior weeks, and the next unplanned Monday
+- **THEN** the result contains the 4 rule-note titles, up to 6 prior weeks, and the next unplanned Monday
 
 #### Scenario: Description instructs Claude
 
 - **WHEN** a client lists the tools
 - **THEN** `get_planning_context`'s description says to call it first whenever planning meals
 
-### Requirement: Rules come from Flatnotes
+### Requirement: Claude reads the rules from Flatnotes
 
-Rules SHALL be read from 4 fixed Flatnotes notes, one per section: household, meal bank, recipes, pantry. If Flatnotes is unreachable or a note is missing, the bundle MUST still return the weeks and next Monday, and state which rule sections are unavailable.
+The app SHALL NOT call Flatnotes or hold Flatnotes credentials. The rules live in 4 Flatnotes notes, one per section: household, meal bank, recipes, pantry. `get_planning_context` MUST name them (titles configurable, with defaults `Meals - Household`, `Meals - Meal Bank`, `Meals - Recipes`, `Meals - Pantry`), and its description MUST tell Claude to read every one with its Flatnotes connector before drafting a plan, and to tell David if one can't be read.
 
-#### Scenario: Flatnotes down
+#### Scenario: Notes named, not read
 
-- **WHEN** Flatnotes cannot be reached
-- **THEN** `get_planning_context` still succeeds, and says that rules are unavailable and should be fetched with the Flatnotes connector
+- **WHEN** `get_planning_context` is called
+- **THEN** the result's `rule_notes` maps each section to its note title, and no rule content is included
 
-#### Scenario: One note missing
+#### Scenario: Description instructs Claude to read the notes
 
-- **WHEN** the recipes note does not exist
-- **THEN** the other three sections are returned, and recipes is reported as missing
+- **WHEN** a client lists the tools
+- **THEN** `get_planning_context`'s description says to read every note in `rule_notes` with the Flatnotes connector before drafting
 
 ### Requirement: Save week plan tool
 

@@ -10,7 +10,7 @@ The grill-me session (2026-10-08) settled the decisions below. They override the
 | ------------- | ------------------------------------------------------------------------------------------------------ |
 | Hosting       | One container on the Pi; viewer at `meals.winterbottom.xyz`, MCP at `mcp.winterbottom.xyz/meals/mcp`   |
 | Web auth      | Entra via the `entra-auth-proxy` sidecar (`entra-proxy`), David only, 1-year session (add-week-viewer) |
-| Rules         | 4 Flatnotes notes, read-only here; `rules` table dropped                                               |
+| Rules         | 4 Flatnotes notes, read by Claude; the app only names them; `rules` table dropped                      |
 | Clashes       | One plan per week; save overwrites with no warning                                                     |
 | Undo          | Append-only history plus `undo_last_change`                                                            |
 | Kita          | Claude writes it; no auto-fill                                                                         |
@@ -25,7 +25,7 @@ The grill-me session (2026-10-08) settled the decisions below. They override the
 
 - Keep the domain logic (dates, validation, undo selection, summaries) in pure exported functions, unit-tested without SQLite or HTTP.
 - Make the store the single write path, so history and undo can't be bypassed.
-- Make the app factory injectable (db path, clock, Flatnotes client), so tests run in memory with a fixed "today".
+- Make the app factory injectable (db path, clock, rule-note titles), so tests run in memory with a fixed "today".
 
 **Non-Goals:**
 
@@ -38,8 +38,8 @@ The grill-me session (2026-10-08) settled the decisions below. They override the
 
 - `src/domain/`: pure helpers (`weekOf`, `resolveWeek`, `validatePlan`, `dinnerSummary`, `pickUndoTarget`).
 - `src/store.js`: better-sqlite3 behind a small API; every write runs in one transaction with its history row.
-- `src/flatnotes.js`: a read-only client.
-- `src/mcp.js`: `createMcpServer(store, rules, clock)`.
+- `src/rules.js`: the rule-note titles (env overrides, defaults).
+- `src/mcp.js`: `createMcpServer({store, ruleNotes, now})`.
 - `src/app.js`: the Express factory.
 - `src/index.js`: env and listen.
 
@@ -53,12 +53,12 @@ _Alternative:_ the mcp-development `server.js`/`index.js` split. It's rejected b
 
 **Week resolution via `Intl.DateTimeFormat` with `timeZone: 'Europe/Zurich'`** on an injected clock. Dates are handled as YYYY-MM-DD strings, so no Date arithmetic crosses a DST boundary. _Alternative:_ a date library. That's an unnecessary dependency for Monday arithmetic.
 
-**Flatnotes rules client.**
+**Claude reads the rules; the app only names them.** (Changed 2026-10-09 after the architecture review; the grill-me session had chosen to bundle the rule text.)
 
-- It reuses flatnotes-mcp's approach: `POST /api/token` with user and password, then `GET /api/notes/<title>`.
-- Note titles come from env, with these defaults: `Meals - Household`, `Meals - Meal Bank`, `Meals - Recipes`, `Meals - Pantry`.
-- It uses a 3 s timeout. A failure returns `{section: null, error}` per note, and the bundle carries a human-readable `rules_status`.
-- Results are not cached: planning is rare, and fresh rules matter more.
+- The app returns the 4 note titles (`rule_notes`), from env with these defaults: `Meals - Household`, `Meals - Meal Bank`, `Meals - Recipes`, `Meals - Pantry`.
+- The tool description tells Claude to read every note with its Flatnotes connector before drafting.
+- _Why:_ reading Flatnotes from the app needs Flatnotes' single admin login, which can read and write every note. A public-facing service holding it would turn any compromise of meal-planner into a compromise of all of David's notes. Claude already has the Flatnotes connector, so the cost is one extra tool call per planning session.
+- _Alternative rejected:_ a read-only Flatnotes account. Flatnotes has one user, so there's no such thing.
 
 **OAuth: vendor the shared module only after it is fixed.**
 
@@ -74,7 +74,7 @@ _Alternative:_ the mcp-development `server.js`/`index.js` split. It's rejected b
 
 - [The OAuth fix hasn't merged when this change is applied] → Task 1.1 blocks on it. Until then, use `x-api-key` only (Claude Code or MCP Inspector) and don't expose the connector to claude.ai.
 - [The vendored OAuth copy drifts from mcp-development] → Record the source commit in a header comment. The mcp-development sync check doesn't cover this repo, so the README notes a manual re-copy on OAuth changes.
-- [Rules unavailable, so Claude plans without constraints] → `rules_status` is explicit, and the tool description tells Claude to fetch the notes with the Flatnotes connector when they're missing.
+- [Claude plans without the rules, e.g. the Flatnotes connector is off in that chat] → The tool description and the summary line both tell Claude to read the notes first and to say if it can't; `docs/how-to-use.md` lists both connectors as required. Nothing enforces it server-side.
 - [better-sqlite3 needs a native build on arm64] → It ships prebuilt binaries for linux-arm64. Use a multi-stage Dockerfile with build tools as a fallback (deploy change).
 - [Overwrite with no warning] → Accepted; undo covers it.
 
