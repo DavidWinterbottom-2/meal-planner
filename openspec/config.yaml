@@ -2,7 +2,7 @@ schema: spec-driven
 
 context: |
   Meal Planner: single-user family meal planner for David (winterbottom.xyz).
-  Two surfaces in ONE Node container: a phone web viewer (meals.winterbottom.xyz,
+  Two surfaces in ONE Node container: a phone web viewer (meals.winterbottom.xyz, behind the
   Entra OIDC login, David only, 1-year session) and an MCP server
   (mcp.winterbottom.xyz/meals/mcp, shared OAuth2 module vendored from
   mcp-development/shared + x-api-key) used by Claude in claude.ai.

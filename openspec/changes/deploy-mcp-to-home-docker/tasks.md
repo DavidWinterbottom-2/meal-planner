@@ -2,12 +2,12 @@
 
 ## 1. Preconditions
 
-- [ ] 1.1 Confirm the OAuth consent fix is deployed: the vendored module requires `OAUTH_APPROVAL_PASSWORD`. Verify locally that `POST /oauth/authorize` with `approve=1` and no password issues no code
+- [x] 1.1 Confirm the OAuth consent fix is deployed: the vendored module requires `OAUTH_APPROVAL_PASSWORD`. Verify locally that `POST /oauth/authorize` with `approve=1` and no password issues no code
 
 ## 2. Image (meal-planner repo)
 
-- [ ] 2.1 Add a multi-stage `Dockerfile` (node:22-bookworm-slim, `npm ci --omit=dev`, non-root, HEALTHCHECK on `/health` run with `node -e "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"`, because the slim image has no curl or wget) and `.dockerignore`. Verify that `docker build` succeeds and that `docker run` with dummy env answers `/health` 200, or with no Docker daemon, run the same check in CI
-- [ ] 2.1a Set `NODE_ENV=production` in the image, so Express never returns stack traces (security review of change 1, finding 2; the app also has its own generic error handler). Verify that `docker run` with the image and `curl -d '{bad' -H 'content-type: application/json' /mcp` returns `{"error":"Bad request"}`
+- [x] 2.1 Add a multi-stage `Dockerfile` (node:22-bookworm-slim, `npm ci --omit=dev`, non-root, HEALTHCHECK on `/health` run with `node -e "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"`, because the slim image has no curl or wget) and `.dockerignore`. Verify that `docker build` succeeds and that `docker run` with dummy env answers `/health` 200, or with no Docker daemon, run the same check in CI
+- [x] 2.1a Set `NODE_ENV=production` in the image, so Express never returns stack traces (security review of change 1, finding 2; the app also has its own generic error handler). Verify that `docker run` with the image and `curl -d '{bad' -H 'content-type: application/json' /mcp` returns `{"error":"Bad request"}`
 - [ ] 2.2 Add `.github/workflows/build.yml` (QEMU, buildx, `linux/arm64`, push on `main`, tags `latest`, the version and `sha-<short commit>`, buildx GHA cache). Verify a green run, that all three tags appear in GHCR, and record the build time
 - [ ] 2.3 Document image build and deploy in the README. Verify that the links to the docker-infra service README resolve
 

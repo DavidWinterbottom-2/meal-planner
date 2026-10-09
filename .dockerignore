@@ -1,0 +1,17 @@
+# Only package*.json and src/ are copied into the image; keep the build
+# context small and free of local state and secrets.
+.git
+.github
+.claude
+.devcontainer
+node_modules
+coverage
+openspec
+docs
+test
+tests
+*.db
+*.db-*
+.env
+.env.*
+!.env.example
