@@ -1,6 +1,15 @@
-// Family meal planner: phone web viewer plus an MCP server so Claude can plan, save and read our weekly meal plans.
+// Entry point: start everything from the environment and stop it cleanly.
 
-export function hello() {
-  // Placeholder so there is covered code for the §4 gate. Replace with the real thing.
-  return "hello from meal-planner";
+import { startServer } from "./server.js";
+
+let running;
+try {
+  running = await startServer({ env: process.env });
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
+}
+
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.once(signal, () => running.stop().then(() => process.exit(0)));
 }

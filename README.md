@@ -2,6 +2,104 @@
 
 Family meal planner: phone web viewer plus an MCP server so Claude can plan, save and read our weekly meal plans.
 
+Plans are stored as **structured data** (one Monday–Sunday week at a time,
+Europe/Zurich), not images, so Claude can read history back, edit a single
+day and build each new plan on what we ate recently. Every write is logged,
+and any change can be undone.
+
+> **Status:** the data store and MCP server are built. The phone viewer, PNG
+> sharing and Lisa's image upload are planned as OpenSpec changes in
+> [`openspec/changes/`](openspec/changes/).
+
+## MCP server
+
+- **Endpoint:** `https://mcp.winterbottom.xyz/meals/mcp` (StreamableHTTP)
+- **Health:** `https://mcp.winterbottom.xyz/meals/health`
+- **Auth:** an `x-api-key` header (Claude Code, MCP Inspector), or OAuth for
+  claude.ai. When you connect claude.ai, the consent page asks for
+  `OAUTH_APPROVAL_PASSWORD`. Without that password nobody can approve a
+  connection.
+
+| Tool                                                        | What it does                                                                                                                                                                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `get_planning_context(weeks_back=6)`                        | Claude calls this first when planning. Returns the titles of the four Flatnotes rule notes for Claude to read, recent weeks in full, weeks already planned ahead, image-only weeks, and the next unplanned Monday. |
+| `save_week_plan(week_start, source, days[], prep?, notes?)` | Create or replace one week. `week_start` must be a Monday; every day must fall inside that week. A 2-week plan is 2 calls.                                                                                         |
+| `update_day(date, fields)`                                  | Change some fields of one day; everything else stays.                                                                                                                                                              |
+| `get_week_plan(week)`                                       | A Monday, or `current` / `next` / `previous`. Returns all seven days.                                                                                                                                              |
+| `list_weeks(from?, to?)`                                    | Weeks newest first, with source, status and a one-line dinner summary.                                                                                                                                             |
+| `delete_week(week_start)`                                   | Delete a week (undoable).                                                                                                                                                                                          |
+| `undo_last_change()`                                        | Reverse the latest save, day edit or delete. Call again to step further back.                                                                                                                                      |
+
+Each day has `morning_snack`, `lunch`, `afternoon_snack`, `dinner` and `note`.
+Mon–Wed lunch is usually the literal `Kita`. Claude writes it in from the
+household rules; the server never fills anything in.
+
+### Planning rules live in Flatnotes
+
+The rules are four Flatnotes notes: `Meals - Household`, `Meals - Meal Bank`,
+`Meals - Recipes` and `Meals - Pantry`. This server never touches Flatnotes and
+holds no Flatnotes credentials: `get_planning_context` only names the notes, and
+Claude reads them with its own Flatnotes connector. So a planning chat needs
+both the Meal Planner and the Flatnotes connectors enabled. To change a rule,
+ask Claude to edit the note with the Flatnotes connector.
+
+To create the notes the first time, paste
+[`docs/seed-flatnotes-rules.md`](docs/seed-flatnotes-rules.md) into a Claude
+chat that has the Flatnotes connector enabled.
+
+### Using it from Claude
+
+[`docs/how-to-use.md`](docs/how-to-use.md) is a short note to paste into a
+Claude chat. It covers planning the next two weeks and saving Lisa's plan from
+a WhatsApp image.
+
+### Lisa's plans
+
+The **only route today**: share Lisa's WhatsApp image into the Claude app and
+say "save Lisa's plan". Claude reads the image, confirms the week, and calls
+`save_week_plan` with `source="Lisa"`. The structured data is saved, but the
+image is not. An upload page that keeps the original image is planned
+(`add-lisa-image-upload`). It is gated on a test of whether claude.ai shows
+images returned by MCP tools.
+
+## Run locally
+
+```bash
+npm install
+MCP_API_KEY=$(openssl rand -hex 32) OAUTH_APPROVAL_PASSWORD=dev \
+  MEALS_DB=./meals.db PORT=3000 npm start
+curl localhost:3000/health
+```
+
+On an empty database the server seeds the two example weeks (2026-10-05 and
+2026-10-12). To try the tools:
+
+```bash
+npx @modelcontextprotocol/inspector --cli http://localhost:3000/mcp \
+  --transport http --header "x-api-key: $MCP_API_KEY" --method tools/list
+```
+
+Every setting is documented in [`.env.example`](.env.example). On the Pi, the
+whole `.env` is stored in Bitwarden as **Meal Planner .env**.
+
+## Data and backups
+
+All data lives in one SQLite file (`MEALS_DB`, default `/data/meals.db`):
+`week`, `day`, and an append-only `history` table holding the before/after
+JSON of every change.
+
+> **Known gap — no backups yet.** The database sits on the Pi's volume with no
+> automated copy. A lost SD card loses all meal history. Until a backup job
+> exists, take a consistent copy by hand:
+> `sqlite3 /data/meals.db ".backup '/path/meals-$(date +%F).db'"`.
+
+## Shared OAuth code
+
+[`src/vendor/oauth2-authorization-server.js`](src/vendor/) is a verbatim copy
+of `mcp-development/shared/`. Change it there first, then re-copy it (see
+[`src/vendor/README.md`](src/vendor/README.md)). Its own test suite runs with
+`npm run test:vendor`.
+
 ## Develop
 
 Open in a VS Code **devcontainer** (Reopen in Container) or Codespaces for a
@@ -11,7 +109,10 @@ reproducible environment — see [`.devcontainer/`](.devcontainer/).
 npm install
 npm run lint                                   # §10 eslint + prettier --check
 npm test                                       # §4 tests, 80% coverage floor
+npm run test:vendor                            # vendored OAuth module's node:test suite
 ```
+
+Work is planned with OpenSpec in [`openspec/`](openspec/).
 
 ## Standards
 
@@ -29,6 +130,12 @@ Code and architecture reviews are recorded in
 [`docs/reviews/LOG.md`](docs/reviews/LOG.md) (§9).
 
 ## Updates
+
+### 2026-10 — data store and MCP server
+
+- SQLite week/day store with an append-only history and `undo_last_change`.
+- MCP server with 7 tools, x-api-key and OAuth (approval password) auth.
+- Planning rules named for Claude to read from Flatnotes (no Flatnotes credentials in this app); the two example weeks are seeded on first start.
 
 ### 2026 — created
 

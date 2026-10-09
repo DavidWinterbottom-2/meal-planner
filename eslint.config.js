@@ -10,5 +10,9 @@ export default [
       sourceType: "module",
       globals: { ...globals.node },
     },
+    rules: {
+      // `const { dropped, ...rest } = obj` is the idiom for omitting a field.
+      "no-unused-vars": ["error", { ignoreRestSiblings: true }],
+    },
   },
 ];

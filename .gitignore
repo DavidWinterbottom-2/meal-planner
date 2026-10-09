@@ -10,3 +10,8 @@ build/
 .cache/
 .DS_Store
 coverage/
+
+# Local SQLite databases (and WAL files) from running the server
+*.db
+*.db-wal
+*.db-shm
