@@ -12,13 +12,24 @@ describe("startServer", () => {
     const logs = [];
     try {
       const running = await startServer({
-        env: { MCP_API_KEY: KEY, PORT: "0", MEALS_DB: join(dir, "meals.db") },
+        env: {
+          MCP_API_KEY: KEY,
+          PORT: "0",
+          VIEWER_PORT: "0",
+          MEALS_DB: join(dir, "meals.db"),
+        },
         host: "127.0.0.1",
         log: (m) => logs.push(m),
       });
       const { port } = running.servers[0].address();
       const res = await fetch(`http://127.0.0.1:${port}/health`);
       expect(res.status).toBe(200);
+      const viewer = running.servers[1].address().port;
+      expect(viewer).not.toBe(port);
+      const page = await fetch(`http://127.0.0.1:${viewer}/history`);
+      expect(page.status).toBe(200);
+      expect(await page.text()).toMatch(/All weeks/);
+      expect(logs[1]).toMatch(/viewer on :\d+/);
       expect(logs[0]).toMatch(/Seeded 2 example weeks/);
       await running.stop();
       expect(running.servers.every((s) => !s.listening)).toBe(true);
@@ -36,7 +47,12 @@ describe("startServer", () => {
     const dir = mkdtempSync(join(tmpdir(), "meals-"));
     try {
       const first = await startServer({
-        env: { MCP_API_KEY: KEY, PORT: "0", MEALS_DB: join(dir, "a.db") },
+        env: {
+          MCP_API_KEY: KEY,
+          PORT: "0",
+          VIEWER_PORT: "0",
+          MEALS_DB: join(dir, "a.db"),
+        },
         host: "127.0.0.1",
         log: () => {},
       });
@@ -46,6 +62,7 @@ describe("startServer", () => {
           env: {
             MCP_API_KEY: KEY,
             PORT: String(port),
+            VIEWER_PORT: "0",
             MEALS_DB: join(dir, "b.db"),
           },
           host: "127.0.0.1",

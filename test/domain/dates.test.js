@@ -9,6 +9,9 @@ import {
   resolveWeek,
   assertMonday,
   addDays,
+  monthShort,
+  daysBetween,
+  dayLabel,
 } from "../../src/domain/dates.js";
 
 describe("isIsoDate", () => {
@@ -104,5 +107,23 @@ describe("labels", () => {
       await import("../../src/domain/dates.js");
     expect(shortWeekday("2026-10-18")).toBe("Sun");
     expect(dayLabel("2026-10-05")).toBe("Mon 5 Oct");
+  });
+});
+
+describe("month names", () => {
+  test("are fixed three-letter English names, whatever the ICU version", () => {
+    expect(
+      Array.from({ length: 12 }, (_, i) =>
+        monthShort(`2026-${String(i + 1).padStart(2, "0")}-01`),
+      ),
+    ).toEqual("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" "));
+    expect(dayLabel("2026-09-28")).toBe("Mon 28 Sep");
+  });
+
+  test("daysBetween counts whole days across DST and years", () => {
+    expect(daysBetween("2026-10-12", "2026-10-26")).toBe(14);
+    expect(daysBetween("2026-10-26", "2026-10-12")).toBe(-14);
+    expect(daysBetween("2026-03-23", "2026-03-30")).toBe(7);
+    expect(daysBetween("2026-12-28", "2027-01-04")).toBe(7);
   });
 });

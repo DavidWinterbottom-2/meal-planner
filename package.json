@@ -1,6 +1,6 @@
 {
   "name": "meal-planner",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Family meal planner: phone web viewer plus an MCP server so Claude can plan, save and read our weekly meal plans.",
   "private": true,
   "type": "module",
@@ -9,10 +9,12 @@
     "format": "prettier --write .",
     "test": "vitest run --coverage",
     "test:vendor": "node --test src/vendor/oauth2-authorization-server.test.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9",
+    "@playwright/test": "1.56.1",
     "@vitest/coverage-v8": "^2",
     "eslint": "^9",
     "globals": "^15",

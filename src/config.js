@@ -15,6 +15,13 @@ export function readConfig(env) {
     errors.push(
       "PORT must be a whole number from 0 to 65535 (0 = any free port)",
     );
+  const viewerPort = parsePort(env.VIEWER_PORT ?? "3001");
+  if (viewerPort === null)
+    errors.push(
+      "VIEWER_PORT must be a whole number from 0 to 65535 (0 = any free port)",
+    );
+  else if (viewerPort !== 0 && viewerPort === port)
+    errors.push("VIEWER_PORT must differ from PORT");
   const tokenTtlHours = Number.parseInt(env.OAUTH_TOKEN_TTL_H ?? "168", 10);
   if (!Number.isInteger(tokenTtlHours) || tokenTtlHours <= 0)
     errors.push("OAUTH_TOKEN_TTL_H must be a positive integer");
@@ -23,6 +30,7 @@ export function readConfig(env) {
 
   return {
     port,
+    viewerPort,
     baseUrl: (env.BASE_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
     dbPath: env.MEALS_DB || "/data/meals.db",
     mcpApiKey,
@@ -33,6 +41,11 @@ export function readConfig(env) {
       tokenTtlHours,
     },
     ruleNotes: ruleTitlesFromEnv(env),
+    // Umami (REPO-STANDARDS §11): off unless both are set.
+    analytics: {
+      scriptUrl: env.ANALYTICS_SCRIPT_URL || "",
+      websiteId: env.ANALYTICS_WEBSITE_ID || "",
+    },
   };
 }
 

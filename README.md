@@ -7,9 +7,39 @@ Europe/Zurich), not images, so Claude can read history back, edit a single
 day and build each new plan on what we ate recently. Every write is logged,
 and any change can be undone.
 
-> **Status:** the data store and MCP server are built. The phone viewer, PNG
+> **Status:** the data store, MCP server and phone viewer are built. PNG
 > sharing and Lisa's image upload are planned as OpenSpec changes in
 > [`openspec/changes/`](openspec/changes/).
+
+## Phone viewer
+
+**[meals.winterbottom.xyz](https://meals.winterbottom.xyz)**: this week's
+meals, read-only, phone first.
+
+- `/` is the current week (Europe/Zurich; Sunday still shows the week that is
+  ending). Prev, This week and Next, or swipe left/right, move between weeks.
+  `/week/YYYY-MM-DD` opens any week (a non-Monday date redirects to its
+  Monday), and `/history` lists every stored week.
+- Today's row is highlighted, dinner is the big line, Mon–Wed "Kita" lunches
+  read "Thomas at Kita", and the week's prep and notes sit below the days.
+- Light and dark mode follow the phone, with a toggle in the header (the
+  shared winterbottom design system, vendored in `src/web/static/`).
+
+**Install it:** open the URL on the phone and sign in, then Share → **Add to
+Home Screen** (iPhone, Safari) or ⋮ → **Install app** (Android, Chrome). It
+opens full screen on the current week.
+
+**Login** is not in this app. The `entra-auth-proxy` sidecar in docker-infra
+signs in with Microsoft Entra, admits only the allow-listed email, keeps the
+session for a year, and then forwards to the app. The app serves the viewer on
+a second port, `VIEWER_PORT` (3001), which is never published: only the
+sidecar reaches it. The MCP port serves no viewer pages, and the viewer port
+serves no MCP or OAuth routes, so neither surface can leak into the other.
+Sign out is at the bottom of each page.
+
+**Analytics:** set `ANALYTICS_SCRIPT_URL` and `ANALYTICS_WEBSITE_ID` to send
+page views to the self-hosted Umami (REPO-STANDARDS §11). With either unset,
+no analytics script is rendered and nothing is sent.
 
 ## MCP server
 
@@ -69,6 +99,7 @@ npm install
 MCP_API_KEY=$(openssl rand -hex 32) OAUTH_APPROVAL_PASSWORD=dev \
   MEALS_DB=./meals.db PORT=3000 npm start
 curl localhost:3000/health
+open http://localhost:3001/        # the viewer (no login locally)
 ```
 
 On an empty database the server seeds the two example weeks (2026-10-05 and
@@ -149,7 +180,13 @@ npm install
 npm run lint                                   # §10 eslint + prettier --check
 npm test                                       # §4 tests, 80% coverage floor
 npm run test:vendor                            # vendored OAuth module's node:test suite
+npm start & npm run test:e2e                   # Playwright against both listeners
 ```
+
+`npm run test:e2e` drives a running server (`E2E_VIEWER_URL`, default
+`http://127.0.0.1:3001`; `E2E_MCP_URL`, default `http://127.0.0.1:3000`). CI
+runs it against the built image and uploads 390px light and dark screenshots
+of the week page as the `viewer-screenshots` artifact.
 
 Work is planned with OpenSpec in [`openspec/`](openspec/).
 
@@ -169,6 +206,13 @@ Code and architecture reviews are recorded in
 [`docs/reviews/LOG.md`](docs/reviews/LOG.md) (§9).
 
 ## Updates
+
+### 2026-10 — phone viewer
+
+- Read-only week viewer on `meals.winterbottom.xyz`: current week, any week,
+  history, swipe, today highlight, Kita, prep, light and dark, installable.
+- Served on a second listener (`VIEWER_PORT`) behind the `entra-auth-proxy`
+  sidecar; optional Umami analytics; Playwright e2e job in CI.
 
 ### 2026-10 — container image
 
