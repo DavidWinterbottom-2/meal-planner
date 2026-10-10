@@ -200,3 +200,34 @@ describe("contentSecurityPolicy", () => {
     );
   });
 });
+
+describe("offline support", () => {
+  test("/sw.js is served from the root, uncached, with the version in", async () => {
+    const r = await fetch(`${viewer}/sw.js`);
+    expect(r.status).toBe(200);
+    expect(r.headers.get("content-type")).toMatch(/javascript/);
+    expect(r.headers.get("cache-control")).toBe("no-cache");
+    const body = await r.text();
+    expect(body).toMatch(/const VERSION = "\d+\.\d+\.\d+";/);
+  });
+
+  test("/offline is the fallback page", async () => {
+    const r = await fetch(`${viewer}/offline`);
+    expect(r.status).toBe(200);
+    expect(await r.text()).toMatch(/You're offline/);
+  });
+
+  test("every page loads the offline script; day rows carry their date", async () => {
+    const body = await (await fetch(`${viewer}/week/2026-10-12`)).text();
+    expect(body).toMatch(/<script type="module" src="\/static\/offline.js">/);
+    expect(body).toMatch(/data-date="2026-10-12"/);
+    expect(await (await fetch(`${viewer}/history`)).text()).toMatch(
+      /static\/offline.js/,
+    );
+  });
+
+  test("the MCP listener doesn't serve the service worker", async () => {
+    expect((await fetch(`${mcp}/sw.js`)).status).toBe(404);
+    expect((await fetch(`${mcp}/offline`)).status).toBe(404);
+  });
+});

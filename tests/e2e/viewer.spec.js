@@ -120,6 +120,39 @@ test.describe("viewer listener", () => {
     }
   });
 
+  test("a week opened online still shows with the network off", async ({
+    page,
+    context,
+  }) => {
+    await page.goto(WEEK);
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    // The first load ran before the worker took over; this one is saved.
+    await page.reload();
+    await expect
+      .poll(() =>
+        page.evaluate(async (path) => Boolean(await caches.match(path)), WEEK),
+      )
+      .toBe(true);
+
+    // setOffline makes the page see "offline"; the route also cuts off the
+    // service worker's own requests, which setOffline doesn't reach in
+    // Chromium.
+    await context.setOffline(true);
+    await context.route("**/*", (route) => route.abort("internetdisconnected"));
+    try {
+      await page.reload();
+      await expect(page.locator("h1")).toHaveText("Mon 12 – Sun 18 Oct");
+      await expect(page.locator(".mp-offline")).toBeVisible();
+      await expect(page.locator(".mp-day")).toHaveCount(7);
+
+      await page.goto("/week/2027-01-04");
+      await expect(page.locator("h1")).toHaveText("You're offline");
+    } finally {
+      await context.unroute("**/*");
+      await context.setOffline(false);
+    }
+  });
+
   test("the viewer does not serve MCP or OAuth routes", async ({ request }) => {
     for (const path of ["/mcp", "/oauth/register", "/health"]) {
       expect((await request.post(path, { data: {} })).status(), path).toBe(404);

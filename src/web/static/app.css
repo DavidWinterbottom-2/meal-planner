@@ -170,3 +170,14 @@ h1 {
   padding: 0 16px max(24px, env(safe-area-inset-bottom));
   text-align: center;
 }
+
+/* Shown by offline.js while the phone has no connection. */
+.mp-offline {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 0.88rem;
+}
