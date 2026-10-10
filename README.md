@@ -14,7 +14,8 @@ and any change can be undone.
 ## Phone viewer
 
 **[meals.winterbottom.xyz](https://meals.winterbottom.xyz)**: this week's
-meals, read-only, phone first.
+meals, read-only, phone first. [`WALKTHROUGH.md`](WALKTHROUGH.md) tours it
+with phone and desktop screenshots, from planning in Claude to the week view.
 
 - `/` is the current week (Europe/Zurich; Sunday still shows the week that is
   ending). Prev, This week and Next, or swipe left/right, move between weeks.
