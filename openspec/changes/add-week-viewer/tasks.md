@@ -28,6 +28,7 @@
 - [x] 3.5a Implement `analyticsTag(env)` and include it in every viewer page's `<head>`. Add `ANALYTICS_SCRIPT_URL` / `ANALYTICS_WEBSITE_ID` (empty) to `.env.example`. Verify unit tests for both-set, half-set and unset, attribute escaping, and that no page contains any other script `src` host. **Done:** unit tests for both-set, half-set, unset and escaping; a render test checks the only external script host is the configured one, and the CSP allows only that origin
 - [ ] 3.5b Add an `e2e` CI job: build the image, start it with dummy env, and drive both listeners with Playwright (the viewer pages render seeded weeks on 3001; `/mcp` rejects an unauthenticated call and `/week/...` is 404 on 3000). Verify the job is green and required on PRs
 - [x] 3.6 Add the manifest (`standalone`, `start_url: /`, a 180px Apple touch icon, a 512px icon) under the paths the sidecar lets through without login. Verify that the manifest test passes and Chrome DevTools reports it installable. **Done:** Chromium's DevTools reports no manifest or installability errors, now an e2e test
+- [x] 3.7 Dim the rows for days before today (Zurich), in any week, keeping them readable (added after go-live at David's request). Verify unit and render tests and a phone screenshot in both themes. **Done:** `isPast` in the view model, `mp-day--past` (surface-2 background, 60% opacity); tests cover midweek and a past week
 
 ## 4. Registration, docs and release
 

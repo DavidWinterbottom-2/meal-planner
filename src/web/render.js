@@ -55,7 +55,7 @@ function dayRow(day) {
     day.snacks &&
       markup`<span><span class="wb-label">Snacks</span> ${day.snacks}</span>`,
   ].filter(Boolean);
-  return markup`<li class="mp-day${day.isToday ? " mp-day--today" : ""}"${raw(day.isToday ? ' aria-current="date"' : "")}>
+  return markup`<li class="mp-day${day.isToday ? " mp-day--today" : ""}${day.isPast ? " mp-day--past" : ""}"${raw(day.isToday ? ' aria-current="date"' : "")}>
   <div class="mp-day__date">${day.label}${day.isToday ? markup` <span class="wb-pill wb-pill--accent">Today</span>` : ""}</div>
   ${
     day.empty

@@ -65,6 +65,8 @@ export function buildWeekView(week, weekStart, today) {
         date: d.date,
         label: dayLabel(d.date),
         isToday: d.date === today,
+        // ISO dates compare correctly as strings.
+        isPast: d.date < today,
         dinner: d.dinner || null,
         lunch,
         kita: lunch === "Thomas at Kita",

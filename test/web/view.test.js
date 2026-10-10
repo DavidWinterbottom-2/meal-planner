@@ -76,6 +76,11 @@ describe("buildWeekView", () => {
     expect(view.days.filter((d) => d.isToday).map((d) => d.date)).toEqual([
       "2026-10-15",
     ]);
+    expect(view.days.filter((d) => d.isPast).map((d) => d.date)).toEqual([
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+    ]);
     expect(view.days[0]).toMatchObject({
       label: "Mon 12 Oct",
       lunch: "Thomas at Kita",
@@ -93,6 +98,7 @@ describe("buildWeekView", () => {
       "2026-10-15",
     );
     expect(view.days.some((d) => d.isToday)).toBe(false);
+    expect(view.days.every((d) => d.isPast)).toBe(true);
     expect(view.badge).toBe("Last week");
   });
 

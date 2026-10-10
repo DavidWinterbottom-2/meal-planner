@@ -60,6 +60,11 @@ h1 {
   background: var(--accent-tint);
   border-color: var(--accent);
 }
+/* Days already gone: dimmed but still readable, for looking back at what we ate. */
+.mp-day--past {
+  background: var(--surface-2);
+  opacity: 0.6;
+}
 .mp-day__date {
   font-family: var(--font-mono);
   font-size: 0.78rem;
