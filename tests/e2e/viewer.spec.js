@@ -36,6 +36,13 @@ test.describe("viewer listener", () => {
     });
   }
 
+  test("only today shows the Today pill", async ({ page }) => {
+    // "/" always contains today; every other row's pill must stay hidden.
+    await page.goto("/");
+    await expect(page.locator(".mp-today-pill:visible")).toHaveCount(1);
+    await expect(page.locator(".mp-day--today .mp-today-pill")).toBeVisible();
+  });
+
   test("dark mode follows the device", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(WEEK);
