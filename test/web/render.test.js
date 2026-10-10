@@ -57,6 +57,9 @@ describe("renderWeek", () => {
     expect(out).toMatch(/Thomas at Kita/);
     expect(out).toMatch(/Lisa&#39;s plan/);
     expect(out).toMatch(/aria-current="date"/);
+    // Mon 12–Wed 14 are before "today" (Thu 15): dimmed; today is not.
+    expect(out.match(/mp-day--past/g)).toHaveLength(3);
+    expect(out).not.toMatch(/mp-day--today mp-day--past/);
     expect(out).toMatch(/rel="prev" href="\/week\/2026-10-05"/);
     expect(out).toMatch(/rel="next" href="\/week\/2026-10-19"/);
     expect(out).toMatch(/Line 1\nLine 2/);

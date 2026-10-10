@@ -25,6 +25,7 @@ function layout({ title, analytics, active, body, swipe = false }) {
 <script src="/static/winterbottom-theme.js"></script>
 <link rel="stylesheet" href="/static/winterbottom.css">
 <link rel="stylesheet" href="/static/app.css">
+<script type="module" src="/static/offline.js"></script>
 ${swipe ? raw('<script type="module" src="/static/swipe.js"></script>') : ""}
 ${raw(analyticsTag(analytics))}
 </head>
@@ -55,8 +56,10 @@ function dayRow(day) {
     day.snacks &&
       markup`<span><span class="wb-label">Snacks</span> ${day.snacks}</span>`,
   ].filter(Boolean);
-  return markup`<li class="mp-day${day.isToday ? " mp-day--today" : ""}"${raw(day.isToday ? ' aria-current="date"' : "")}>
-  <div class="mp-day__date">${day.label}${day.isToday ? markup` <span class="wb-pill wb-pill--accent">Today</span>` : ""}</div>
+  // data-date and the always-present (hidden) Today pill let offline.js
+  // re-mark the days when a saved copy is shown on a later day.
+  return markup`<li class="mp-day${day.isToday ? " mp-day--today" : ""}${day.isPast ? " mp-day--past" : ""}" data-date="${day.date}"${raw(day.isToday ? ' aria-current="date"' : "")}>
+  <div class="mp-day__date">${day.label} <span class="wb-pill wb-pill--accent mp-today-pill"${raw(day.isToday ? "" : " hidden")}>Today</span></div>
   ${
     day.empty
       ? markup`<div class="mp-day__dinner mp-day__dinner--none">—</div>`
@@ -128,4 +131,13 @@ export function renderNotFound({ analytics } = {}) {
   <p>That page doesn't exist. <a href="/">Go to this week</a>.</p>
 </section>`;
   return layout({ title: "Meals · Not found", analytics, body });
+}
+
+// Shown by the service worker for a page that isn't saved on this phone.
+export function renderOffline({ analytics } = {}) {
+  const body = markup`<section class="mp-empty">
+  <h1>You're offline</h1>
+  <p>This page isn't saved on this phone yet. Weeks you've opened before still work. <a href="/">Go to this week</a>.</p>
+</section>`;
+  return layout({ title: "Meals · Offline", analytics, body });
 }

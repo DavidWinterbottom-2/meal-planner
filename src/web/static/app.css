@@ -60,6 +60,11 @@ h1 {
   background: var(--accent-tint);
   border-color: var(--accent);
 }
+/* Days already gone: dimmed but still readable, for looking back at what we ate. */
+.mp-day--past {
+  background: var(--surface-2);
+  opacity: 0.6;
+}
 .mp-day__date {
   font-family: var(--font-mono);
   font-size: 0.78rem;
@@ -164,4 +169,15 @@ h1 {
   margin: 0 auto;
   padding: 0 16px max(24px, env(safe-area-inset-bottom));
   text-align: center;
+}
+
+/* Shown by offline.js while the phone has no connection. */
+.mp-offline {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--warn);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 0.88rem;
 }

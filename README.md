@@ -25,6 +25,11 @@ with phone and desktop screenshots, from planning in Claude to the week view.
   read "Thomas at Kita", and the week's prep and notes sit below the days.
 - Light and dark mode follow the phone, with a toggle in the header (the
   shared winterbottom design system, vendored in `src/web/static/`).
+- **Works offline.** A service worker (`src/web/static/sw.js`) saves each
+  page you open, plus this week and history. With no signal (or none within
+  4 s) the saved copy is shown under an "Offline" banner, with today re-marked
+  from the phone's clock. A week never opened shows an offline page. Signing
+  out deletes everything saved on the phone.
 
 **Install it:** open the URL on the phone and sign in, then Share → **Add to
 Home Screen** (iPhone, Safari) or ⋮ → **Install app** (Android, Chrome). It
@@ -207,6 +212,12 @@ Code and architecture reviews are recorded in
 [`docs/reviews/LOG.md`](docs/reviews/LOG.md) (§9).
 
 ## Updates
+
+### 2026-10 — offline viewer
+
+- The viewer works with no signal: pages opened online are saved on the
+  phone and shown under an "Offline" banner (OpenSpec `add-offline-viewer`).
+- Days already gone are dimmed.
 
 ### 2026-10 — phone viewer
 
