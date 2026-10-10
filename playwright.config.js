@@ -6,6 +6,10 @@
 // test-results/screenshots/ (uploaded as a CI artifact).
 import { defineConfig, devices } from "@playwright/test";
 
+// Let context.route() see the service worker's own requests (Chromium), so
+// the offline test can cut the worker off from the network too.
+process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS ??= "1";
+
 export default defineConfig({
   testDir: "tests/e2e",
   outputDir: "test-results/artifacts",

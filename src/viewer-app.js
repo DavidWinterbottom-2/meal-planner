@@ -5,15 +5,34 @@
 // and the MCP listener serves none of these.
 
 import express from "express";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isIsoDate, isMonday, weekOf, zurichToday } from "./domain/dates.js";
 import { buildHistoryView, buildWeekView } from "./web/view.js";
-import { renderHistory, renderNotFound, renderWeek } from "./web/render.js";
+import {
+  renderHistory,
+  renderNotFound,
+  renderOffline,
+  renderWeek,
+} from "./web/render.js";
 
 const STATIC_DIR = fileURLToPath(new URL("./web/static/", import.meta.url));
 const ICONS_DIR = fileURLToPath(
   new URL("./web/static/icons/", import.meta.url),
 );
+
+const PACKAGE = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+);
+
+// The service worker with this release's version baked in, so every release
+// starts a fresh offline cache (and drops the previous one).
+export function serviceWorkerScript(version = PACKAGE.version) {
+  return readFileSync(
+    new URL("./web/static/sw.js", import.meta.url),
+    "utf8",
+  ).replaceAll("__VERSION__", version);
+}
 
 export const MANIFEST = {
   name: "Meal Planner",
@@ -82,6 +101,16 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     res.type("application/manifest+json").send(JSON.stringify(MANIFEST)),
   );
   app.use("/icons", express.static(ICONS_DIR, { maxAge: "7d" }));
+
+  // At the root so it can control every page. no-cache: the browser always
+  // checks for a new release. Behind the login like the pages it caches.
+  const swScript = serviceWorkerScript();
+  app.get("/sw.js", (_req, res) =>
+    res
+      .set("Cache-Control", "no-cache")
+      .type("application/javascript")
+      .send(swScript),
+  );
   app.use(
     "/static",
     express.static(STATIC_DIR, { maxAge: "1h", index: false }),
@@ -112,6 +141,11 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
       }),
     );
   });
+
+  // The service worker's fallback for a page not saved on the phone.
+  app.get("/offline", (_req, res) =>
+    page(res, 200, renderOffline({ analytics })),
+  );
 
   app.get("/history", (_req, res) =>
     page(
