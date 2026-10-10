@@ -5,7 +5,7 @@ you see at **[meals.winterbottom.xyz](https://meals.winterbottom.xyz)**. For
 setup and internals, see the [README](README.md).
 
 The screenshots use the two example weeks the app seeds into an empty
-database, taken on Saturday 10 October 2026.
+database, taken on Sunday 11 October 2026.
 
 ## 1. Plans go in through Claude
 
@@ -44,7 +44,7 @@ It opens full screen on the current week.
   weeks"). Under the heading it says whose plan it is: David's or Lisa's.
 - Each day's dinner is the big line. Lunch and snacks sit underneath, and
   Mon–Wed Kita lunches read "Thomas at Kita".
-- **Today** is highlighted.
+- **Today** is highlighted, and the days already gone are dimmed.
 - Notes for the day (who's out, trips) are in italics. The week's **Prep** list
   is below Sunday.
 - On a Sunday, `/` still shows the week that's ending, so the prep list is
@@ -86,11 +86,20 @@ column in the middle of the screen.
 
 ![History in a desktop browser](docs/screenshots/desktop-history.png)
 
-## 7. Signing out
+## 7. No signal
+
+Every week you open is saved on the phone, and so are this week and History.
+With no signal, or none within about 4 seconds, you get the saved copy under
+an "Offline" banner, and today is still marked correctly. A week you've never
+opened shows a "You're offline" page. Once you're back online, it loads the
+latest plan again.
+
+## 8. Signing out
 
 **Sign out** is at the bottom of every page. To shut someone out, remove
 their address from the allow-list in docker-infra. That takes effect on
-their next page load, even on a phone that is already signed in.
+their next page load, even on a phone that is already signed in. Signing
+out also deletes the copy saved on the phone.
 
 ## Updating the screenshots
 
