@@ -73,6 +73,11 @@ h1 {
   align-items: center;
   gap: 8px;
 }
+/* Every row carries a Today pill for offline.js to reveal; the design
+   system's .wb-pill display would otherwise override the hidden attribute. */
+.mp-today-pill[hidden] {
+  display: none;
+}
 .mp-day--today .mp-day__date {
   color: var(--accent);
 }
