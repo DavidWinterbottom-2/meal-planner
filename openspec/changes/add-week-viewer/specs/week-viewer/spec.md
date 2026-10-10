@@ -87,6 +87,20 @@ The row for today's date (Europe/Zurich) SHALL be visually highlighted, and only
 - **WHEN** the current week is viewed on 2026-10-15
 - **THEN** the 2026-10-15 row is highlighted and no other row is
 
+### Requirement: Past days shaded
+
+Every row whose date is before today (Europe/Zurich) SHALL be visibly dimmed, in any week, so the days still to come stand out. Today and later days SHALL NOT be dimmed. Dimmed rows SHALL stay readable.
+
+#### Scenario: Midweek
+
+- **WHEN** the current week is viewed on 2026-10-15
+- **THEN** the 12th–14th are dimmed and the 15th–18th are not
+
+#### Scenario: Last week
+
+- **WHEN** the previous week is viewed
+- **THEN** all seven rows are dimmed
+
 ### Requirement: Prep and source
 
 The page SHALL show the week's prep block and notes below the days, and a small label "David's plan" or "Lisa's plan" (or "<source>'s plan") naming the source.
