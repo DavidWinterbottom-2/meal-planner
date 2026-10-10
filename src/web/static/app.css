@@ -1,0 +1,167 @@
+/* Meal Planner viewer. Loaded after winterbottom.css; styles only through
+   its tokens. Phone first: one column, no horizontal scroll at 390px. */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+.wb-appbar {
+  padding-top: max(10px, env(safe-area-inset-top));
+}
+
+.mp-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+}
+h1 {
+  font-size: 1.35rem;
+  margin: 6px 0 2px;
+  line-height: 1.25;
+}
+
+.mp-week__head .wb-label {
+  margin: 2px 0 0;
+}
+
+.mp-weeknav {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+}
+.mp-weeknav .wb-btn {
+  flex: 1;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+}
+
+.mp-days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.mp-day {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  min-width: 0;
+}
+.mp-day--today {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
+.mp-day__date {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mp-day--today .mp-day__date {
+  color: var(--accent);
+}
+.mp-day__dinner {
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+.mp-day__dinner--none {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.mp-day__more {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.mp-day__more .wb-label {
+  margin-right: 4px;
+}
+.mp-kita {
+  color: var(--ink-3);
+}
+.mp-day__note {
+  font-style: italic;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.mp-block {
+  margin-top: 18px;
+}
+.mp-block h2 {
+  margin: 0 0 6px;
+}
+.mp-pre {
+  white-space: pre-line;
+  margin: 0;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.mp-empty {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+  padding: 20px 16px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.mp-empty .wb-btn {
+  text-decoration: none;
+  margin-top: 6px;
+}
+
+.mp-history__list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.mp-history__list a {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.mp-history__list a:hover {
+  border-color: var(--ink-3);
+}
+.mp-history__when {
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+}
+.mp-history__dinners {
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.mp-footer {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+}

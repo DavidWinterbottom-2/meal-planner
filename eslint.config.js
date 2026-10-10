@@ -15,4 +15,14 @@ export default [
       "no-unused-vars": ["error", { ignoreRestSiblings: true }],
     },
   },
+  {
+    // Browser code: served as-is (swipe.js), or run in the page by
+    // Playwright's page.evaluate() callbacks in the e2e specs.
+    files: ["src/web/static/**/*.js", "tests/e2e/**/*.js"],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+  {
+    // Vendored verbatim from docker-infra/design-system; never edited here.
+    ignores: ["src/web/static/winterbottom-theme.js"],
+  },
 ];

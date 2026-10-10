@@ -7,3 +7,7 @@ coverage/
 .github/skills/
 # Vendored verbatim from mcp-development/shared — must stay byte-identical.
 src/vendor/
+
+# Vendored design system: byte-identical copies of docker-infra/design-system
+src/web/static/winterbottom.css
+src/web/static/winterbottom-theme.js

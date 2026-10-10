@@ -47,9 +47,19 @@ export function shortWeekday(date) {
 
 // "Mon 12 Oct" style label for a date.
 export function dayLabel(date) {
-  const d = toUtc(date);
-  const month = d.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
-  return `${shortWeekday(date)} ${d.getUTCDate()} ${month}`;
+  return `${shortWeekday(date)} ${Number(date.slice(8))} ${monthShort(date)}`;
+}
+
+// Whole days from `from` to `to` (negative when `to` is earlier).
+export function daysBetween(from, to) {
+  return Math.round((toUtc(to) - toUtc(from)) / DAY_MS);
+}
+
+// Short month name, e.g. "Oct". A fixed table rather than toLocaleString:
+// ICU versions disagree (en-GB gives "Sept" on some, "Sep" on others).
+const MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+export function monthShort(date) {
+  return MONTHS[Number(date.slice(5, 7)) - 1];
 }
 
 export function isMonday(date) {

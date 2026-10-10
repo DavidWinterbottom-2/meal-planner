@@ -19,14 +19,14 @@ The store, week resolution and `listWeeks` come from `add-meal-plan-store-and-mc
 
 **Sidecar, not in-app login.** `entra-auth-proxy` (oauth2-proxy) sits in front of the viewer only:
 
-- `meals.winterbottom.xyz` → Apache → sidecar (published port) → app's **viewer listener** (`VIEWER_PORT`, default 3001, `expose`d on the docker network, never published).
+- `meals.winterbottom.xyz` → Apache → sidecar (`meal-planner-auth:4180`, by container name; **no host port**) → app's **viewer listener** (`VIEWER_PORT`, default 3001, `expose`d on the docker network, never published). _Changed while applying:_ the plan published the sidecar's port like Hermes does; reaching it by container name, with `disablereuse=On`, is the pattern proven for the MCP in `deploy-mcp-to-home-docker`, and leaves nothing on the Pi's LAN address at all.
 - `mcp.winterbottom.xyz/meals/` → Apache → app's **MCP listener** (port 3000, published only to Apache per change 2). This listener serves only `/mcp`, `/oauth/*`, `/.well-known/*` and `/health`.
 - One process, two Express apps on two ports. A viewer route simply does not exist on the MCP listener, and MCP routes don't exist on the viewer listener, so neither surface can leak into the other even if Apache is misconfigured. _Alternative:_ one port with `--skip-auth-route` on the proxy and path rules in Apache. Rejected: it relies on two configs staying in sync to keep plan data private.
 - Sidecar settings follow Hermes:
   - `OAUTH2_PROXY_UPSTREAMS=http://meal-planner:3001`
   - `OAUTH2_PROXY_REDIRECT_URL=https://meals.winterbottom.xyz/oauth2/callback`
   - client ID and secret, cookie secret
-  - allow-list via `OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE`, a mounted file containing only David's address. `EMAIL_DOMAINS=*` alone would admit anyone in the tenant.
+  - allow-list via `OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE`, a mounted file containing only David's address. [Likely] oauth2-proxy admits an email whose domain matches `EMAIL_DOMAINS` **or** that is in the file, and the image bakes `EMAIL_DOMAINS=*`, so the file alone would still admit anyone in the tenant. `OAUTH2_PROXY_EMAIL_DOMAINS` is therefore set to `allowlist-only.invalid`, which no real address matches. The file is generated from `MEALS_VIEWER_EMAILS` in `.env` (`make emails`) and git-ignored, so the address stays out of git. Task 2.2's second-account check verifies this.
   - `OAUTH2_PROXY_COOKIE_EXPIRE=8760h` (1 year) and `OAUTH2_PROXY_COOKIE_SAMESITE=lax`. Provider, issuer, cookie-secure, scope and the unverified-email trust are baked into the `entra-auth-proxy` image, so they aren't repeated here (HOSTING-SECURITY §H3)
   - `OAUTH2_PROXY_SKIP_AUTH_ROUTES` for `^/manifest\.webmanifest$` and `^/icons/`, so the home-screen install works before login.
 - The cookie is encrypted by the sidecar and carries the session itself, so a container restart doesn't log you out.
