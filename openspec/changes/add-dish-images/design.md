@@ -10,7 +10,7 @@
    - It is published on the desktop's **Tailscale address only** (`desktop-home:8190`) and requires an API key. The meal planner (`FOOD_IMAGE_URL`, `FOOD_IMAGE_API_KEY`) is its first client. Others can follow, for example nutrition-tracker or recipe notes.
    - The prompt is limited to 300 characters of plain text. The service handles one generation at a time (it queues) and times out after 3 minutes.
 
-2. **Style.**2. **Style.** Default: a **flat, friendly food illustration** in a consistent style, similar to Lisa's plans and clearly not a photo. The other option is photo-realistic. A generated "photo" of your Älplermagronen that doesn't look like yours tends to jar more than an illustration does. The style lives in `DISH_IMAGE_STYLE`, so you can change it later and regenerate.
+2. **Style: photo-realistic (decided).** The house style is a realistic food photograph: a plated home-cooked dish, natural light, shallow depth of field, a top-down or 45° angle, with no text, hands or people. The style lives in the food-image service's `FOOD_STYLE`, so it can be changed later and every picture regenerated. Realistic pictures of a dish rarely match how yours looks; that's accepted.
 3. **Skip list.** Dinners matching `out`, `ikea`, `restaurant`, `takeaway`, `leftover`, `use-it-up`, `kita` or `—` (case-insensitive) get no picture. The list lives in config.
 
 ## Dish key

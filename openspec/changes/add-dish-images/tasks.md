@@ -3,7 +3,8 @@
 ## 0. Decisions (David)
 
 - [x] 0.1 How the Pi reaches ComfyUI. **Decided:** a standard food-image pipeline service beside ComfyUI (design decision 1)
-- [ ] 0.2 Confirm the style (illustration by default) and the skip list
+- [x] 0.2 Style. **Decided:** photo-realistic
+- [ ] 0.3 Confirm the skip list (default: out, IKEA, restaurant, takeaway, leftovers, use-it-up, Kita)
 
 ## 1. Library and queue
 
