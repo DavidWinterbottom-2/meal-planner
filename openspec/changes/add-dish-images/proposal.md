@@ -7,11 +7,11 @@ The viewer is text only. A picture beside each dinner makes the week readable at
 ## What Changes
 
 - **A dish picture library.** Each distinct dinner (normalised text, e.g. "Rack of lamb + potatoes + broccoli") gets one generated picture, stored on the meal planner's data volume and reused whenever that dinner comes up again.
-- **Generation in the background.** When a week is saved or a day is updated, its dinners with no picture yet are queued. A loop in the meal-planner process sends each one to ComfyUI and saves the result. If ComfyUI is unreachable (desktop off), the queue waits and retries; nothing else is affected. Existing weeks are backfilled once.
+- **Generation in the background.** When a week is saved or a day is updated, its dinners with no picture yet are queued. A loop in the meal-planner process sends each one to the food-image service and saves the result. If the service is unreachable (desktop off), the queue waits and retries; nothing else is affected. Existing weeks are backfilled once.
 - **Non-cooked dinners are skipped:** eating out, "Kita", leftovers and use-it-up nights, by a small, editable list of patterns.
 - **The viewer shows the picture** beside each day's dinner. Pictures are served behind the viewer login and saved for offline use like the rest of the page.
 - **An MCP tool `regenerate_dish_image`** lets Claude throw away a bad picture and queue a new one ("the lamb picture looks like a cake, redo it").
-- **docker-infra:** the meal planner on the Pi needs to reach ComfyUI's API. Today ComfyUI is reachable only through its Entra sign-in proxy, which a server can't pass. See design.md, decision 1.
+- **A standard food-image pipeline on the desktop:** a small service beside ComfyUI that takes a food prompt and returns a picture, using one fixed workflow and house style. It is reachable over Tailscale with an API key. The meal planner is its first client, and other apps can reuse it. See design.md, decision 1.
 
 ## Non-goals
 
@@ -32,6 +32,7 @@ None. The week page gains a picture element, specified in `dish-images`.
 
 ## Impact
 
-- meal-planner: new table `dish_image`, files under `/data/dish-images/`, a background generator, a viewer route `/dish-images/:key.png`, one MCP tool, and new settings `COMFYUI_URL`, `COMFYUI_CHECKPOINT` and `DISH_IMAGE_STYLE`. The feature is off when `COMFYUI_URL` is empty. No new npm dependencies.
-- docker-infra (desktop-docker/comfyui): one new port binding (decision 1).
+- meal-planner: new table `dish_image`, files under `/data/dish-images/`, a background generator, a viewer route `/dish-images/:key.png`, one MCP tool, and new settings `FOOD_IMAGE_URL` and `FOOD_IMAGE_API_KEY`. The feature is off when the URL is empty. No new npm dependencies.
+- sidecar-containers: a new `food-image` service with its own build workflow and tests.
+- docker-infra (desktop-docker/comfyui): the `food-image` service, published on the Tailscale address only, plus its `.env` (API key, checkpoint name). The meal planner's compose gets the two `FOOD_IMAGE_*` settings.
 - Disk: about 300 KB per dish at 512×512 PNG, so about 15 MB for 50 dishes.
