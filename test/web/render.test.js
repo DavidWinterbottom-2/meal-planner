@@ -114,3 +114,25 @@ describe("renderHistory", () => {
     expect(renderHistory([])).toMatch(/No weeks planned yet/);
   });
 });
+
+test("a day with a picture shows it with the dinner as alt text", () => {
+  const view = buildWeekView(
+    {
+      week_start: "2026-10-12",
+      source: "David",
+      status: "data",
+      days: [
+        { date: "2026-10-12", dinner: "Fish & chips" },
+        { date: "2026-10-13", dinner: "Stew" },
+      ],
+    },
+    "2026-10-12",
+    "2026-10-15",
+    (dinner) => (dinner === "Fish & chips" ? "/dish-images/abc.png?v=1" : null),
+  );
+  const out = renderWeek(view);
+  expect(out.match(/mp-day__img/g)).toHaveLength(1);
+  expect(out).toMatch(
+    /src="\/dish-images\/abc.png\?v=1" alt="Fish &amp; chips"/,
+  );
+});

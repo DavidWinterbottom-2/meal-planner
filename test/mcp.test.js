@@ -402,3 +402,34 @@ describe("review follow-ups", () => {
     ).toBe(true);
   });
 });
+
+describe("regenerate_dish_image", () => {
+  test("is offered only when dish pictures are on", async () => {
+    store = openStore();
+    await connect();
+    const { tools } = await client.listTools();
+    expect(tools.map((t) => t.name)).not.toContain("regenerate_dish_image");
+  });
+
+  test("queues a new picture, and refuses skipped dinners", async () => {
+    store = openStore();
+    const server = createMcpServer({
+      store,
+      ruleNotes: RULE_NOTES,
+      dishImages: { url: "http://x", skip: ["ikea"] },
+      now: () => NOW,
+    });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await server.connect(a);
+    client = new Client({ name: "test", version: "0" });
+    await client.connect(b);
+    const done = await call("regenerate_dish_image", { dinner: "Fish pie" });
+    expect(done.isError).toBe(false);
+    expect(done.data).toEqual({ dinner: "Fish pie", status: "pending" });
+    const skipped = await call("regenerate_dish_image", {
+      dinner: "Dinner at IKEA",
+    });
+    expect(skipped.isError).toBe(true);
+    expect(skipped.text).toMatch(/skip list/);
+  });
+});

@@ -7,6 +7,35 @@ import { startServer } from "../src/server.js";
 const KEY = "k".repeat(64);
 
 describe("startServer", () => {
+  test("with FOOD_IMAGE_URL set, the dish picture worker runs and stops cleanly", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "meals-"));
+    const logs = [];
+    try {
+      const running = await startServer({
+        env: {
+          MCP_API_KEY: KEY,
+          PORT: "0",
+          VIEWER_PORT: "0",
+          MEALS_DB: join(dir, "meals.db"),
+          // Nothing listens here: the worker must back off, not crash.
+          FOOD_IMAGE_URL: "http://127.0.0.1:9",
+          FOOD_IMAGE_API_KEY: KEY,
+        },
+        host: "127.0.0.1",
+        log: (m) => logs.push(m),
+      });
+      await expect
+        .poll(() => logs.some((m) => /food-image service unreachable/.test(m)))
+        .toBe(true);
+      // The seeded dinners were queued.
+      expect(running.store.nextPendingDish()).not.toBeNull();
+      await running.stop();
+      expect(running.store._db.open).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("starts, seeds, serves /health, and stops every listener and the store", async () => {
     const dir = mkdtempSync(join(tmpdir(), "meals-"));
     const logs = [];

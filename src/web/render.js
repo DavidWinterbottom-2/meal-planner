@@ -63,7 +63,7 @@ function dayRow(day) {
   ${
     day.empty
       ? markup`<div class="mp-day__dinner mp-day__dinner--none">—</div>`
-      : markup`<div class="mp-day__dinner">${day.dinner || "—"}</div>
+      : markup`${day.image ? markup`<img class="mp-day__img" src="${day.image}" alt="${day.dinner}" width="72" height="72" loading="lazy">` : ""}<div class="mp-day__dinner">${day.dinner || "—"}</div>
   ${details.length ? markup`<div class="mp-day__more">${details}</div>` : ""}
   ${day.note ? markup`<div class="mp-day__note">${day.note}</div>` : ""}`
   }

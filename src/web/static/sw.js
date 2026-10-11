@@ -32,7 +32,9 @@ function isPage(url) {
 
 function isAsset(url) {
   return (
-    url.pathname.startsWith("/static/") || url.pathname.startsWith("/icons/")
+    url.pathname.startsWith("/static/") ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/dish-images/")
   );
 }
 

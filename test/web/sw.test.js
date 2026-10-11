@@ -171,6 +171,19 @@ describe("service worker", () => {
     expect(await w.caches.match("/week/2026-10-12")).toBeUndefined();
   });
 
+  test("dish pictures are cache-first, so they show offline", async () => {
+    const w = makeWorker({
+      network: { "/dish-images/0123456789abcdef.png": res("png") },
+    });
+    expect((await w.request("/dish-images/0123456789abcdef.png")).body).toBe(
+      "png",
+    );
+    w.network["/dish-images/0123456789abcdef.png"] = "offline";
+    expect((await w.request("/dish-images/0123456789abcdef.png")).body).toBe(
+      "png",
+    );
+  });
+
   test("static files are cache-first", async () => {
     const w = makeWorker({ network: { "/static/app.css": res("css v1") } });
     expect((await w.request("/static/app.css")).body).toBe("css v1");
