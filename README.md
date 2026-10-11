@@ -25,6 +25,13 @@ with phone and desktop screenshots, from planning in Claude to the week view.
   read "Thomas at Kita", and the week's prep and notes sit below the days.
 - Light and dark mode follow the phone, with a toggle in the header (the
   shared winterbottom design system, vendored in `src/web/static/`).
+- **Dish pictures.** With `FOOD_IMAGE_URL` and `FOOD_IMAGE_API_KEY` set, each
+  distinct dinner gets one photo-realistic picture from the desktop's
+  `food-image` service (ComfyUI), shown beside it and saved for offline use.
+  A background worker generates them a few minutes after a save; while the
+  desktop is off it waits and retries. Dinners out, leftovers and Kita are
+  skipped (`DISH_IMAGE_SKIP`). Ask Claude to `regenerate_dish_image` for a
+  bad one. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
 - **Works offline.** A service worker (`src/web/static/sw.js`) saves each
   page you open, plus this week and history. With no signal (or none within
   4 s) the saved copy is shown under an "Offline" banner, with today re-marked
@@ -212,6 +219,11 @@ Code and architecture reviews are recorded in
 [`docs/reviews/LOG.md`](docs/reviews/LOG.md) (§9).
 
 ## Updates
+
+### 2026-10 — dish pictures
+
+- Generated dish pictures beside each dinner, from the desktop's `food-image`
+  service (OpenSpec `add-dish-images`).
 
 ### 2026-10 — offline viewer
 

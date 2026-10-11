@@ -81,6 +81,21 @@ h1 {
 .mp-day--today .mp-day__date {
   color: var(--accent);
 }
+/* A generated dish picture beside the dinner (OpenSpec add-dish-images). */
+.mp-day__img {
+  float: right;
+  width: 72px;
+  height: 72px;
+  margin: 2px 0 4px 10px;
+  border-radius: var(--r);
+  object-fit: cover;
+  background: var(--surface-2);
+}
+.mp-day::after {
+  content: "";
+  display: block;
+  clear: both;
+}
 .mp-day__dinner {
   font-size: 1.12rem;
   font-weight: 600;

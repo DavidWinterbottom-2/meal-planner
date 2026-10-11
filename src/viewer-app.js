@@ -9,6 +9,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isIsoDate, isMonday, weekOf, zurichToday } from "./domain/dates.js";
 import { buildHistoryView, buildWeekView } from "./web/view.js";
+import { dishKey } from "./images/dish.js";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { dishImagePath } from "./images/worker.js";
 import {
   renderHistory,
   renderNotFound,
@@ -78,8 +82,21 @@ export function contentSecurityPolicy(analytics = {}) {
   ].join("; ");
 }
 
+// A finished dish picture's URL; ?v changes when it is regenerated, so the
+// long browser cache never shows a stale picture.
+export function dishImageUrl(store, dinner) {
+  const key = dishKey(dinner);
+  const row = store.dishImages([key]).get(key);
+  if (row?.status !== "done") return null;
+  return `/dish-images/${key}.png?v=${Date.parse(row.updated_at).toString(36)}`;
+}
+
 export function createViewerApp({ store, config, now = () => new Date() }) {
   const app = express();
+  const imagesDir = config.dishImages?.dir;
+  const imageFor = config.dishImages?.url
+    ? (dinner) => dishImageUrl(store, dinner)
+    : () => null;
   const analytics = config.analytics ?? {};
   const csp = contentSecurityPolicy(analytics);
   const page = (res, status, body) =>
@@ -102,6 +119,16 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
   );
   app.use("/icons", express.static(ICONS_DIR, { maxAge: "7d" }));
 
+  // Generated dish pictures, behind the login like the pages. The name must
+  // be a 16-hex key, so nothing outside the pictures directory is reachable.
+  app.get("/dish-images/:file", (req, res, next) => {
+    const m = /^([0-9a-f]{16})\.png$/.exec(req.params.file);
+    const file = m && imagesDir && dishImagePath(imagesDir, m[1]);
+    if (!file || !existsSync(file)) return next();
+    res.set("Cache-Control", "private, max-age=2592000, immutable");
+    res.sendFile(resolve(file));
+  });
+
   // At the root so it can control every page. no-cache: the browser always
   // checks for a new release. Behind the login like the pages it caches.
   const swScript = serviceWorkerScript();
@@ -122,9 +149,12 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     page(
       res,
       200,
-      renderWeek(buildWeekView(store.getWeek(weekStart), weekStart, today), {
-        analytics,
-      }),
+      renderWeek(
+        buildWeekView(store.getWeek(weekStart), weekStart, today, imageFor),
+        {
+          analytics,
+        },
+      ),
     );
   });
 
@@ -136,7 +166,7 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     page(
       res,
       200,
-      renderWeek(buildWeekView(store.getWeek(date), date, today), {
+      renderWeek(buildWeekView(store.getWeek(date), date, today, imageFor), {
         analytics,
       }),
     );

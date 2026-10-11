@@ -46,7 +46,15 @@ describe("schema", () => {
     ]);
     expect(cols("day")).toContain("afternoon_snack");
     expect(cols("history")).toContain("undoes_id");
-    expect(store._db.pragma("user_version", { simple: true })).toBe(1);
+    expect(cols("dish_image")).toEqual([
+      "key",
+      "dish_text",
+      "status",
+      "attempts",
+      "error",
+      "updated_at",
+    ]);
+    expect(store._db.pragma("user_version", { simple: true })).toBe(2);
   });
 
   test("reopening an existing file keeps its data", () => {

@@ -18,6 +18,7 @@ import {
   cleanText,
 } from "./domain/plan.js";
 import { pickUndoTarget } from "./domain/history.js";
+import { dishKey, isSkippedDish, DEFAULT_SKIP } from "./images/dish.js";
 
 // Schema migrations, applied in order. The database's `user_version` is the
 // number of steps already applied. Never edit a step once it has shipped;
@@ -58,6 +59,17 @@ BEGIN SELECT RAISE(ABORT, 'history is append-only'); END;
 CREATE TRIGGER history_no_delete BEFORE DELETE ON history
 BEGIN SELECT RAISE(ABORT, 'history is append-only'); END;
 `,
+  // 2: one generated picture per distinct dinner (OpenSpec add-dish-images).
+  `
+CREATE TABLE dish_image (
+  key        TEXT PRIMARY KEY,
+  dish_text  TEXT NOT NULL,
+  status     TEXT NOT NULL CHECK (status IN ('pending', 'done', 'failed', 'skipped')),
+  attempts   INTEGER NOT NULL DEFAULT 0,
+  error      TEXT,
+  updated_at TEXT NOT NULL
+);
+`,
 ];
 
 export class NotFoundError extends Error {}
@@ -95,6 +107,27 @@ export function openStore(path = ":memory:") {
     weekCount: db.prepare("SELECT count(*) AS n FROM week"),
     historyCount: db.prepare("SELECT count(*) AS n FROM history"),
     weekStarts: db.prepare("SELECT week_start FROM week"),
+    dinners: db.prepare(
+      "SELECT DISTINCT dinner FROM day WHERE dinner IS NOT NULL AND dinner <> ''",
+    ),
+    insertDish: db.prepare(
+      `INSERT OR IGNORE INTO dish_image (key, dish_text, status, updated_at)
+       VALUES (@key, @dish_text, @status, @updated_at)`,
+    ),
+    dish: db.prepare("SELECT * FROM dish_image WHERE key = ?"),
+    nextPendingDish: db.prepare(
+      "SELECT * FROM dish_image WHERE status = 'pending' ORDER BY updated_at, key LIMIT 1",
+    ),
+    updateDish: db.prepare(
+      `UPDATE dish_image SET status = @status, attempts = @attempts, error = @error,
+       updated_at = @updated_at WHERE key = @key`,
+    ),
+    upsertDish: db.prepare(
+      `INSERT INTO dish_image (key, dish_text, status, attempts, error, updated_at)
+       VALUES (@key, @dish_text, @status, 0, NULL, @updated_at)
+       ON CONFLICT(key) DO UPDATE SET status = excluded.status, attempts = 0,
+       error = NULL, updated_at = excluded.updated_at`,
+    ),
   };
 
   // The stored week with its stored days only (no padding), or null.
@@ -256,6 +289,58 @@ export function openStore(path = ":memory:") {
       let monday = currentMonday;
       while (planned.has(monday)) monday = addDays(monday, 7);
       return monday;
+    },
+
+    // --- dish pictures (OpenSpec add-dish-images) ---
+
+    // Give every distinct stored dinner a dish_image row: pending, or skipped
+    // when it isn't a cooked dish. Covers saves, day updates, undo and the
+    // first-run backfill alike. Returns how many rows were added.
+    syncDishImages(at, skip = DEFAULT_SKIP) {
+      let added = 0;
+      db.transaction(() => {
+        for (const { dinner } of q.dinners.all()) {
+          added += q.insertDish.run({
+            key: dishKey(dinner),
+            dish_text: dinner,
+            status: isSkippedDish(dinner, skip) ? "skipped" : "pending",
+            updated_at: at,
+          }).changes;
+        }
+      })();
+      return added;
+    },
+    nextPendingDish: () => q.nextPendingDish.get() ?? null,
+    getDish: (key) => q.dish.get(key) ?? null,
+    updateDish: (key, { status, attempts, error = null }, at) =>
+      q.updateDish.run({ key, status, attempts, error, updated_at: at }),
+
+    // Status of each key that has a row: key -> { status, updated_at }.
+    dishImages(keys) {
+      const out = new Map();
+      for (const key of new Set(keys)) {
+        const row = q.dish.get(key);
+        if (row) out.set(key, row);
+      }
+      return out;
+    },
+
+    // Throw a dinner's picture away and queue a new one.
+    regenerateDish(dinner, at, skip = DEFAULT_SKIP) {
+      const text = cleanText(dinner);
+      if (!text) throw new Error("dinner is required");
+      if (isSkippedDish(text, skip))
+        throw new Error(
+          `"${text}" is on the skip list (eating out, leftovers, Kita…), so it never gets a picture`,
+        );
+      const key = dishKey(text);
+      q.upsertDish.run({
+        key,
+        dish_text: text,
+        status: "pending",
+        updated_at: at,
+      });
+      return q.dish.get(key);
     },
 
     // True only for a database that has never held a week, so deleting every

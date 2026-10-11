@@ -192,6 +192,39 @@ describe("errors", () => {
 });
 
 describe("readConfig", () => {
+  test("dish pictures are off by default, with a dir next to the database", () => {
+    const c = readConfig({
+      MCP_API_KEY: "k".repeat(64),
+      MEALS_DB: "/data/meals.db",
+    });
+    expect(c.dishImages).toMatchObject({ url: "", dir: "/data/dish-images" });
+    expect(c.dishImages.skip).toContain("ikea");
+  });
+
+  test("dish pictures need a key and a valid URL when switched on", () => {
+    const base = { MCP_API_KEY: "k".repeat(64) };
+    expect(() =>
+      readConfig({ ...base, FOOD_IMAGE_URL: "http://desktop-home:8190" }),
+    ).toThrow(/FOOD_IMAGE_API_KEY/);
+    expect(() =>
+      readConfig({
+        ...base,
+        FOOD_IMAGE_URL: "desktop-home:8190",
+        FOOD_IMAGE_API_KEY: "k".repeat(40),
+      }),
+    ).toThrow(/FOOD_IMAGE_URL/);
+    const c = readConfig({
+      ...base,
+      FOOD_IMAGE_URL: "http://desktop-home:8190/",
+      FOOD_IMAGE_API_KEY: "k".repeat(40),
+      DISH_IMAGE_SKIP: "pizza, ,out",
+    });
+    expect(c.dishImages).toMatchObject({
+      url: "http://desktop-home:8190",
+      skip: ["pizza", "out"],
+    });
+  });
+
   test("requires a long MCP_API_KEY", () => {
     expect(() => readConfig({})).toThrow(/MCP_API_KEY must be set/);
     expect(() => readConfig({ MCP_API_KEY: "short" })).toThrow(/at least 32/);

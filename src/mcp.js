@@ -124,7 +124,12 @@ export function buildPlanningContext({ store, ruleNotes, today, weeksBack }) {
 
 // `now` is injected so tests can fix "today"; `ruleNotes` maps each rules
 // section to its Flatnotes note title (see rules.js).
-export function createMcpServer({ store, ruleNotes, now = () => new Date() }) {
+export function createMcpServer({
+  store,
+  ruleNotes,
+  dishImages,
+  now = () => new Date(),
+}) {
   const server = new McpServer({ name: "meal-planner", version: APP_VERSION });
   const stamp = () => now().toISOString();
 
@@ -319,6 +324,33 @@ export function createMcpServer({ store, ruleNotes, now = () => new Date() }) {
       );
     }),
   );
+
+  // Only offered when dish pictures are on (FOOD_IMAGE_URL set).
+  if (dishImages?.url) {
+    server.registerTool(
+      "regenerate_dish_image",
+      {
+        title: "Redo a dish picture",
+        description:
+          "Throw away the generated picture for a dinner and queue a new one (it appears in the viewer a few " +
+          "minutes later, while the desktop is on). Use when David says a picture looks wrong. Pass the dinner " +
+          "text exactly as it is in the plan.",
+        inputSchema: {
+          dinner: z
+            .string()
+            .max(TEXT_MAX)
+            .describe("The dinner text, as stored in the plan"),
+        },
+      },
+      guarded(async ({ dinner }) => {
+        const row = store.regenerateDish(dinner, stamp(), dishImages.skip);
+        return ok(`Queued a new picture for "${row.dish_text}".`, {
+          dinner: row.dish_text,
+          status: row.status,
+        });
+      }),
+    );
+  }
 
   return server;
 }

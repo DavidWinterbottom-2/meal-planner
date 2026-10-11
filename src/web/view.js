@@ -44,7 +44,9 @@ function snacks(day) {
 
 // The model for one week page. `week` is the store's week (all 7 days) or
 // null when nothing is planned; `weekStart` is the Monday being viewed.
-export function buildWeekView(week, weekStart, today) {
+// `imageFor(dinner)` returns the dinner's picture URL, or null (no picture
+// yet, skipped, or pictures off).
+export function buildWeekView(week, weekStart, today, imageFor = () => null) {
   const currentMonday = weekOf(today);
   const days = week?.days ?? weekDates(weekStart).map((date) => ({ date }));
   return {
@@ -68,6 +70,7 @@ export function buildWeekView(week, weekStart, today) {
         // ISO dates compare correctly as strings.
         isPast: d.date < today,
         dinner: d.dinner || null,
+        image: d.dinner ? imageFor(d.dinner) : null,
         lunch,
         kita: lunch === "Thomas at Kita",
         snacks: snack,

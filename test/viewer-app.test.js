@@ -231,3 +231,84 @@ describe("offline support", () => {
     expect((await fetch(`${mcp}/offline`)).status).toBe(404);
   });
 });
+
+describe("dish pictures", () => {
+  const PNG = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from("x"),
+  ]);
+  let picViewer, picStore, dir, fishKey;
+
+  beforeAll(async () => {
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { dishKey } = await import("../src/images/dish.js");
+    dir = mkdtempSync(join(tmpdir(), "pics-"));
+    picStore = openStore();
+    picStore.saveWeek(
+      {
+        week_start: "2026-10-12",
+        days: [
+          { date: "2026-10-12", dinner: "Fish pie" },
+          { date: "2026-10-13", dinner: "Rack of lamb" },
+        ],
+      },
+      "2026-10-10T00:00:00.000Z",
+    );
+    picStore.syncDishImages("2026-10-10T00:00:00.000Z");
+    fishKey = dishKey("Fish pie");
+    picStore.updateDish(
+      fishKey,
+      { status: "done", attempts: 0 },
+      "2026-10-11T00:00:00.000Z",
+    );
+    writeFileSync(join(dir, `${fishKey}.png`), PNG);
+    const config = readConfig({
+      MCP_API_KEY: KEY,
+      FOOD_IMAGE_URL: "http://desktop-home:8190",
+      FOOD_IMAGE_API_KEY: KEY,
+      DISH_IMAGES_DIR: dir,
+    });
+    picViewer = await listen(
+      createViewerApp({ store: picStore, config, now: () => nowValue }),
+    );
+  });
+
+  test("a finished picture shows beside its dinner; a pending one doesn't", async () => {
+    const page = await (await fetch(`${picViewer}/week/2026-10-12`)).text();
+    const imgs = [
+      ...page.matchAll(/<img class="mp-day__img" src="([^"]+)" alt="([^"]+)"/g),
+    ];
+    expect(imgs.map((m) => m[2])).toEqual(["Fish pie"]);
+    expect(imgs[0][1]).toMatch(
+      new RegExp(`^/dish-images/${fishKey}\\.png\\?v=[0-9a-z]+$`),
+    );
+    const r = await fetch(`${picViewer}${imgs[0][1].replace("&amp;", "&")}`);
+    expect(r.status).toBe(200);
+    expect(r.headers.get("content-type")).toBe("image/png");
+    expect(r.headers.get("cache-control")).toMatch(/immutable/);
+    expect(Buffer.from(await r.arrayBuffer())).toEqual(PNG);
+  });
+
+  test.each([
+    "/dish-images/0000000000000000.png", // no such picture
+    "/dish-images/..%2Fmeals.db",
+    "/dish-images/ABCDEF0123456789.png", // upper case is not a key
+    `/dish-images/x.png`,
+  ])("%s is 404", async (path) => {
+    expect((await fetch(`${picViewer}${path}`)).status).toBe(404);
+  });
+
+  test("with pictures off, no picture is shown or served", async () => {
+    const page = await (await fetch(`${viewer}/week/2026-10-12`)).text();
+    expect(page).not.toMatch(/mp-day__img/);
+    expect((await fetch(`${viewer}/dish-images/${fishKey}.png`)).status).toBe(
+      404,
+    );
+  });
+
+  test("the MCP listener never serves pictures", async () => {
+    expect((await fetch(`${mcp}/dish-images/${fishKey}.png`)).status).toBe(404);
+  });
+});

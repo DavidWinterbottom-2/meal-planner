@@ -42,6 +42,7 @@ export function createMcpApp({ store, config, now = () => new Date() }) {
       await createMcpServer({
         store,
         ruleNotes: config.ruleNotes,
+        dishImages: config.dishImages,
         now,
       }).connect(transport);
       await transport.handleRequest(req, res, req.body);
