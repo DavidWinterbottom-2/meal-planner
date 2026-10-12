@@ -21,6 +21,8 @@ COPY --from=deps /app/node_modules ./node_modules
 # package.json is read at runtime for the server's reported version.
 COPY package.json ./
 COPY src ./src
+# The fonts the week picture is drawn with (add-week-png-share).
+COPY assets ./assets
 # The database lives on a volume owned by the unprivileged node user (uid 1000).
 RUN mkdir -p /data && chown node:node /data
 USER node

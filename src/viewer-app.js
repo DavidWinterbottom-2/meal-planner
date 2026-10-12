@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isIsoDate, isMonday, weekOf, zurichToday } from "./domain/dates.js";
 import { buildHistoryView, buildWeekView } from "./web/view.js";
+import { renderWeekPng } from "./web/week-image.js";
 import { dishKey } from "./images/dish.js";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -156,6 +157,21 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
         },
       ),
     );
+  });
+
+  // The week as a picture for sharing (OpenSpec add-week-png-share).
+  // Registered before /week/:date; rendered on every request, so it always
+  // shows the week as stored now (after an update, delete or undo too).
+  app.get("/week/:date.png", async (req, res) => {
+    const { date } = req.params;
+    if (!isIsoDate(date)) return page(res, 404, renderNotFound({ analytics }));
+    if (!isMonday(date)) return res.redirect(302, `/week/${weekOf(date)}.png`);
+    const week = store.getWeek(date);
+    if (!week) return page(res, 404, renderNotFound({ analytics }));
+    const png = await renderWeekPng(
+      buildWeekView(week, date, zurichToday(now())),
+    );
+    res.set("Cache-Control", "no-store").type("png").send(png);
   });
 
   app.get("/week/:date", (req, res) => {
