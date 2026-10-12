@@ -169,7 +169,11 @@ describe("installable app", () => {
   });
 });
 
-describe("week picture", () => {
+// Rendering a PNG (satori, then resvg) is CPU-heavy, and the first one also
+// loads fonts and WASM: allow more than vitest's 5 s on a busy CI runner.
+const RENDER_TIMEOUT = 20_000;
+
+describe("week picture", { timeout: RENDER_TIMEOUT }, () => {
   const png = (date) => get(`${viewer}/week/${date}.png`);
   const isPng = (buf) => buf.subarray(1, 4).toString() === "PNG";
 

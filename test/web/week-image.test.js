@@ -84,7 +84,9 @@ describe("buildImageTree", () => {
   });
 });
 
-describe("renderWeekPng", () => {
+// CPU-heavy, and the first render loads fonts and WASM: allow more than
+// vitest's 5 s on a busy CI runner.
+describe("renderWeekPng", { timeout: 20_000 }, () => {
   test("a PNG at least 1080px wide; a long dinner wraps and makes it taller", async () => {
     const view = seededView();
     const base = await renderWeekPng(view);
