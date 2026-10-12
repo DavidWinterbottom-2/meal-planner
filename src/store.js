@@ -70,6 +70,17 @@ CREATE TABLE dish_image (
   updated_at TEXT NOT NULL
 );
 `,
+  // 3: Lisa's original plan images (OpenSpec add-lisa-image-upload). The
+  // week points at its image, so week snapshots (and so undo) carry it.
+  `
+CREATE TABLE image (
+  id            TEXT PRIMARY KEY,
+  filename      TEXT NOT NULL,
+  original_name TEXT,
+  uploaded_at   TEXT NOT NULL
+);
+ALTER TABLE week ADD COLUMN image_id TEXT REFERENCES image(id);
+`,
 ];
 
 export class NotFoundError extends Error {}
@@ -84,8 +95,8 @@ export function openStore(path = ":memory:") {
     week: db.prepare("SELECT * FROM week WHERE week_start = ?"),
     days: db.prepare("SELECT * FROM day WHERE week_start = ? ORDER BY date"),
     insertWeek: db.prepare(
-      `INSERT INTO week (week_start, source, status, prep, notes, updated_at)
-       VALUES (@week_start, @source, @status, @prep, @notes, @updated_at)`,
+      `INSERT INTO week (week_start, source, status, prep, notes, updated_at, image_id)
+       VALUES (@week_start, @source, @status, @prep, @notes, @updated_at, @image_id)`,
     ),
     insertDay: db.prepare(
       `INSERT INTO day (week_start, date, ${DAY_FIELDS.join(", ")})
@@ -122,6 +133,12 @@ export function openStore(path = ":memory:") {
       `UPDATE dish_image SET status = @status, attempts = @attempts, error = @error,
        updated_at = @updated_at WHERE key = @key`,
     ),
+    insertImage: db.prepare(
+      `INSERT INTO image (id, filename, original_name, uploaded_at)
+       VALUES (@id, @filename, @original_name, @uploaded_at)`,
+    ),
+    image: db.prepare("SELECT * FROM image WHERE id = ?"),
+    imageIds: db.prepare("SELECT id FROM image"),
     upsertDish: db.prepare(
       `INSERT INTO dish_image (key, dish_text, status, attempts, error, updated_at)
        VALUES (@key, @dish_text, @status, 0, NULL, @updated_at)
@@ -146,7 +163,7 @@ export function openStore(path = ":memory:") {
     q.deleteWeek.run(weekStart);
     if (!snap) return;
     const { days, ...week } = snap;
-    q.insertWeek.run(week);
+    q.insertWeek.run({ image_id: null, ...week });
     for (const day of days) {
       q.insertDay.run({ ...emptyDay(day.date), ...day, week_start: weekStart });
     }
@@ -174,6 +191,8 @@ export function openStore(path = ":memory:") {
         prep: cleanText(prep),
         notes: cleanText(notes),
         updated_at: at,
+        // Transcribing Lisa's image keeps it attached.
+        image_id: before?.image_id ?? null,
         days: cleanDays,
       });
       const after = snapshot(week_start);
@@ -227,6 +246,40 @@ export function openStore(path = ":memory:") {
     record(weekStart, "delete", before, null, at);
   });
 
+  // Attach an uploaded image to a week, replacing any earlier one. A week
+  // with no plan is created as image_only, from Lisa. Recorded in history
+  // like any other write, so undo restores the week as it was.
+  const attachImageTx = db.transaction(
+    (weekStart, { id, filename, original_name }, at) => {
+      assertMonday(weekStart);
+      q.insertImage.run({
+        id,
+        filename,
+        original_name: cleanText(original_name),
+        uploaded_at: at,
+      });
+      const before = snapshot(weekStart);
+      writeSnapshot(
+        weekStart,
+        before
+          ? { ...before, image_id: id, updated_at: at }
+          : {
+              week_start: weekStart,
+              source: "Lisa",
+              status: "image_only",
+              prep: null,
+              notes: null,
+              updated_at: at,
+              image_id: id,
+              days: [],
+            },
+      );
+      const after = snapshot(weekStart);
+      record(weekStart, before ? "replace" : "create", before, after, at);
+      return withAllDays(after);
+    },
+  );
+
   const undoTx = db.transaction((at) => {
     const picked = pickUndoTarget(q.historyRows.all());
     if (!picked) return null;
@@ -251,6 +304,9 @@ export function openStore(path = ":memory:") {
     updateDay: (date, fields, at) => updateDayTx(date, fields, at),
     deleteWeek: (weekStart, at) => deleteWeekTx(weekStart, at),
     undoLastChange: (at) => undoTx(at),
+    attachImage: (weekStart, image, at) => attachImageTx(weekStart, image, at),
+    getImage: (id) => q.image.get(id) ?? null,
+    imageIds: () => new Set(q.imageIds.all().map((r) => r.id)),
 
     // The week with all seven days (missing days empty), or null.
     getWeek(weekStart) {
@@ -380,6 +436,8 @@ export function normalizeSnapshot(snap) {
     prep: snap.prep ?? null,
     notes: snap.notes ?? null,
     updated_at: snap.updated_at,
+    // Snapshots from before images existed have no image.
+    image_id: snap.image_id ?? null,
     days: (snap.days ?? []).map((d) => ({ ...emptyDay(d.date), ...d })),
   };
 }

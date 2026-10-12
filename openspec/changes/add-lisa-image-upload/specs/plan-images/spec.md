@@ -17,7 +17,7 @@ Keeps Lisa's original plan images alongside the structured weeks. David can uplo
 
 ### Requirement: Accepted images
 
-An upload SHALL accept JPEG, PNG, HEIC or WebP up to 15 MB. Other types, larger files, or a non-Monday week MUST be rejected with a message, and nothing stored.
+An upload SHALL accept JPEG, PNG or WebP up to 15 MB. HEIC, other types, larger files, or a non-Monday week MUST be rejected with a message, and nothing stored. (HEIC: the prebuilt sharp can't decode it; the message says how to send JPEG instead.)
 
 #### Scenario: Wrong type
 

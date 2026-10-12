@@ -42,12 +42,17 @@ function snacks(day) {
   return parts.length ? parts.join(" · ") : null;
 }
 
+// The URL of a week's original plan image (Lisa's upload), or null.
+export const planImageUrl = (week) =>
+  week?.image_id ? `/plan-images/${week.image_id}.jpg` : null;
+
 // The model for one week page. `week` is the store's week (all 7 days) or
 // null when nothing is planned; `weekStart` is the Monday being viewed.
 // `imageFor(dinner)` returns the dinner's picture URL, or null (no picture
 // yet, skipped, or pictures off).
 export function buildWeekView(week, weekStart, today, imageFor = () => null) {
   const currentMonday = weekOf(today);
+  const imageOnly = week?.status === "image_only";
   const days = week?.days ?? weekDates(weekStart).map((date) => ({ date }));
   return {
     weekStart,
@@ -55,6 +60,9 @@ export function buildWeekView(week, weekStart, today, imageFor = () => null) {
     badge: weekBadge(weekStart, today),
     isCurrent: weekStart === currentMonday,
     planned: Boolean(week),
+    // Only Lisa's image so far: shown full width instead of day rows.
+    imageOnly,
+    original: planImageUrl(week),
     source: week ? sourceLabel(week.source) : null,
     prep: week?.prep ?? null,
     notes: week?.notes ?? null,

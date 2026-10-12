@@ -67,6 +67,13 @@ export function readConfig(env) {
         : DEFAULT_SKIP,
       size: 768,
     },
+    // Lisa's original plan images (add-lisa-image-upload).
+    planImagesDir:
+      env.PLAN_IMAGES_DIR ||
+      join(dirname(env.MEALS_DB || "/data/meals.db"), "plan-images"),
+    // Bind the viewer to this host only (docker-infra puts it on a network
+    // only the login sidecar shares). Unset: every interface.
+    viewerHost: env.VIEWER_HOST || undefined,
     // Umami (REPO-STANDARDS §11): off unless both are set.
     analytics: {
       scriptUrl: env.ANALYTICS_SCRIPT_URL || "",

@@ -15,7 +15,7 @@ The brief asked to "test early whether image content returned by an MCP tool rea
 
 ## Decisions
 
-**sharp for sanitising.** Rotate according to EXIF orientation, then strip all metadata, resize so the long edge is at most 2000px, and re-encode as JPEG at quality 85. sharp ships prebuilt linux-arm64 binaries and reads HEIC. iOS usually converts to JPEG on upload anyway. _Alternative:_ strip the JPEG APP1 segment by hand. That doesn't cover HEIC, PNG text chunks or resizing.
+**sharp for sanitising.** Rotate according to EXIF orientation, then strip all metadata, resize so the long edge is at most 2000px, and re-encode as JPEG at quality 85. sharp ships prebuilt linux-arm64 binaries. Its prebuilt libvips reads AVIF but not HEIC (HEVC is patent-encumbered), so HEIC is refused with a hint; WhatsApp images are JPEG. iOS usually converts to JPEG on upload anyway. _Alternative:_ strip the JPEG APP1 segment by hand. That doesn't cover HEIC, PNG text chunks or resizing.
 
 **Storage.**
 
@@ -27,5 +27,7 @@ The brief asked to "test early whether image content returned by an MCP tool rea
 
 ## Risks / Trade-offs
 
-- [HEIC decoding is unavailable in the sharp build] → iOS converts camera-roll uploads to JPEG for `<input type=file accept="image/*">`. If HEIC still arrives and fails, return a clear error, and check this on the phone.
-- [An upload's CSRF exposure] → `SameSite=Lax` cookie plus an `Origin` header check on POST `/upload`.
+- [HEIC decoding is unavailable in the sharp build (confirmed)] → iOS converts camera-roll uploads to JPEG for `<input type=file accept="image/*">`, and WhatsApp images are JPEG. If HEIC still arrives, it's refused with a hint; check this on the phone.
+- [An upload's CSRF exposure] → `SameSite=Lax` cookie plus a same-origin check on POST `/upload`: `Sec-Fetch-Site: same-origin`, or, from browsers without it, an `Origin` matching the request's host. The CSP's `form-action` becomes `'self'`.
+- [History kinds] → `history.kind` has a CHECK constraint, and history is append-only, so an upload is recorded as `create` (new image-only week) or `replace` rather than a new kind.
+- [Viewer binding] → `VIEWER_HOST` binds the viewer to the address of a private compose network shared only with the sidecar (task 2.0); unset, it binds every interface as before.

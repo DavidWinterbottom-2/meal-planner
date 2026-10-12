@@ -9,6 +9,7 @@ import { seedIfEmpty } from "./seed/weeks.js";
 import { createMcpApp } from "./mcp-app.js";
 import { createViewerApp } from "./viewer-app.js";
 import { createDishImageWorker } from "./images/worker.js";
+import { sweepOrphanImages } from "./images/plan-image.js";
 
 // Express 5 hands a listen error (e.g. EADDRINUSE) to the callback.
 function listen(app, port, host) {
@@ -33,6 +34,12 @@ export async function startServer({
   const store = openStore(config.dbPath);
   const seeded = seedIfEmpty(store, now().toISOString());
   if (seeded) log(`Seeded ${seeded} example weeks into an empty database`);
+  const swept = sweepOrphanImages(
+    config.planImagesDir,
+    store.imageIds(),
+    now().getTime(),
+  );
+  if (swept) log(`Removed ${swept} plan image files no week refers to`);
 
   const servers = [];
   try {
@@ -43,7 +50,7 @@ export async function startServer({
       await listen(
         createViewerApp({ store, config, now }),
         config.viewerPort,
-        host,
+        config.viewerHost ?? host,
       ),
     );
   } catch (e) {

@@ -2,17 +2,23 @@ import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import {
   contentSecurityPolicy,
   createViewerApp,
+  isSameOrigin,
   MANIFEST,
 } from "../src/viewer-app.js";
 import { createMcpApp } from "../src/mcp-app.js";
 import { readConfig } from "../src/config.js";
 import { openStore } from "../src/store.js";
 import { seedIfEmpty } from "../src/seed/weeks.js";
+import sharp from "sharp";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const KEY = "k".repeat(64);
 let nowValue = new Date("2026-10-15T10:00:00Z"); // Thursday of the 2026-10-12 week
 const servers = [];
 let viewer, mcp, store;
+const planImagesDir = mkdtempSync(join(tmpdir(), "plan-images-"));
 
 function listen(app) {
   return new Promise((resolve) => {
@@ -30,6 +36,7 @@ beforeAll(async () => {
     MCP_API_KEY: KEY,
     ANALYTICS_SCRIPT_URL: "https://umami.winterbottom.xyz/script.js",
     ANALYTICS_WEBSITE_ID: "site-1",
+    PLAN_IMAGES_DIR: planImagesDir,
   });
   viewer = await listen(
     createViewerApp({ store, config, now: () => nowValue }),
@@ -39,6 +46,7 @@ beforeAll(async () => {
 afterAll(() => {
   servers.forEach((s) => s.close());
   store.close();
+  rmSync(planImagesDir, { recursive: true, force: true });
 });
 
 const get = (url) => fetch(url, { redirect: "manual" });
@@ -362,5 +370,197 @@ describe("dish pictures", () => {
 
   test("the MCP listener never serves pictures", async () => {
     expect((await fetch(`${mcp}/dish-images/${fishKey}.png`)).status).toBe(404);
+  });
+});
+
+describe("Lisa's original (upload)", () => {
+  const jpeg = () =>
+    sharp({
+      create: { width: 60, height: 40, channels: 3, background: "#336699" },
+    })
+      .jpeg()
+      .toBuffer();
+  const post = async (fields, { file, headers } = {}) => {
+    const form = new FormData();
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+    if (file) form.append("image", new Blob([file.data]), file.name);
+    return fetch(`${viewer}/upload`, {
+      method: "POST",
+      body: form,
+      redirect: "manual",
+      headers: { "sec-fetch-site": "same-origin", ...headers },
+    });
+  };
+
+  test("the upload page defaults to the next unplanned Monday, or ?week=", async () => {
+    nowValue = new Date("2026-10-15T10:00:00Z");
+    const page = await (await get(`${viewer}/upload`)).text();
+    expect(page).toMatch(/<option value="2026-10-19" selected>/);
+    expect(page).toMatch(/enctype="multipart\/form-data"/);
+    expect(page).toMatch(/href="\/upload" aria-current="page"/);
+    const pre = await (await get(`${viewer}/upload?week=2026-11-02`)).text();
+    expect(pre).toMatch(/<option value="2026-11-02" selected>/);
+    expect(pre).toMatch(/2026-10-12"[^>]*>Mon 12 – Sun 18 Oct · planned/);
+  });
+
+  test("the empty week links to the upload with that week preselected", async () => {
+    const body = await (await get(`${viewer}/week/2026-11-02`)).text();
+    expect(body).toMatch(/href="\/upload\?week=2026-11-02"/);
+  });
+
+  test("an upload for an unplanned week shows the image full width, without metadata", async () => {
+    const res = await post(
+      { week: "2026-11-09" },
+      { file: { data: await jpeg(), name: "IMG_1.jpg" } },
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe("/week/2026-11-09");
+    const week = store.getWeek("2026-11-09");
+    expect(week).toMatchObject({ status: "image_only", source: "Lisa" });
+    const page = await (await get(`${viewer}/week/2026-11-09`)).text();
+    const src = `/plan-images/${week.image_id}.jpg`;
+    expect(page).toContain(`<a href="${src}"><img src="${src}"`);
+    expect(page).toMatch(/mp-original--full/);
+    expect(page).not.toMatch(/data-share-week/);
+    expect((await get(`${viewer}/week/2026-11-09.png`)).status).toBe(404);
+
+    const img = await get(`${viewer}${src}`);
+    expect(img.status).toBe(200);
+    expect(img.headers.get("content-type")).toBe("image/jpeg");
+    expect(img.headers.get("cache-control")).toMatch(/private/);
+    expect(readdirSync(planImagesDir)).toContain(`${week.image_id}.jpg`);
+  });
+
+  test("a week with data shows it, with the image under Lisa's original", async () => {
+    const res = await post(
+      { week: "2026-10-12" },
+      { file: { data: await jpeg(), name: "plan.jpg" } },
+    );
+    expect(res.status).toBe(303);
+    const page = await (await get(`${viewer}/week/2026-10-12`)).text();
+    expect(page).toMatch(/<details class="mp-block mp-original">/);
+    expect(page).toMatch(/Lisa's original<\/summary>/);
+    expect(page).toMatch(/Thomas at Kita/);
+    expect(page).toMatch(/data-share-week/);
+    store.undoLastChange(new Date().toISOString());
+    expect(store.getWeek("2026-10-12").image_id).toBeNull();
+  });
+
+  test("rejections: wrong type, no file, bad week, too big; nothing stored", async () => {
+    const before = readdirSync(planImagesDir).length;
+    const pdf = await post(
+      { week: "2026-11-16" },
+      { file: { data: Buffer.from("%PDF-1.7 not an image"), name: "x.pdf" } },
+    );
+    expect(pdf.status).toBe(400);
+    expect(await pdf.text()).toMatch(/Unsupported file type/);
+    const none = await post({ week: "2026-11-16" });
+    expect(none.status).toBe(400);
+    expect(await none.text()).toMatch(/Choose a photo/);
+    const tuesday = await post(
+      { week: "2026-11-17" },
+      { file: { data: await jpeg(), name: "a.jpg" } },
+    );
+    expect(await tuesday.text()).toMatch(/Choose a week/);
+    const huge = await post(
+      { week: "2026-11-16" },
+      { file: { data: Buffer.alloc(16 * 1024 * 1024, 1), name: "big.jpg" } },
+    );
+    expect(huge.status).toBe(413);
+    expect(store.getWeek("2026-11-16")).toBeNull();
+    expect(readdirSync(planImagesDir)).toHaveLength(before);
+  });
+
+  test("a cross-site POST is refused before anything is read", async () => {
+    const res = await post(
+      { week: "2026-11-23" },
+      {
+        file: { data: await jpeg(), name: "a.jpg" },
+        headers: { "sec-fetch-site": "cross-site" },
+      },
+    );
+    expect(res.status).toBe(403);
+    expect(store.getWeek("2026-11-23")).toBeNull();
+  });
+
+  test("at most two uploads run at once; a third is told to retry", async () => {
+    // Two uploads whose bodies never finish hold both slots.
+    const hold = () => {
+      let close;
+      const body = new ReadableStream({
+        start(c) {
+          c.enqueue(new TextEncoder().encode("--x\r\n"));
+          close = () => c.close();
+        },
+      });
+      const done = fetch(`${viewer}/upload`, {
+        method: "POST",
+        body,
+        duplex: "half",
+        headers: {
+          "sec-fetch-site": "same-origin",
+          "content-type": "multipart/form-data; boundary=x",
+        },
+      }).catch(() => null);
+      return { close: () => close(), done };
+    };
+    const a = hold();
+    const b = hold();
+    await new Promise((r) => setTimeout(r, 100));
+    const third = await post(
+      { week: "2026-11-30" },
+      { file: { data: await jpeg(), name: "a.jpg" } },
+    );
+    expect(third.status).toBe(503);
+    expect(third.headers.get("retry-after")).toBe("5");
+    a.close();
+    b.close();
+    await Promise.all([a.done, b.done]);
+    await new Promise((r) => setTimeout(r, 50));
+    const after = await post(
+      { week: "2026-11-30" },
+      { file: { data: await jpeg(), name: "a.jpg" } },
+    );
+    expect(after.status).toBe(303);
+  });
+
+  test("unknown or malformed image names are a 404", async () => {
+    expect(
+      (await get(`${viewer}/plan-images/${"f".repeat(32)}.jpg`)).status,
+    ).toBe(404);
+    expect((await get(`${viewer}/plan-images/..%2Fmeals.db`)).status).toBe(404);
+  });
+
+  test("the MCP listener serves neither the upload nor the images", async () => {
+    for (const path of ["/upload", `/plan-images/${"f".repeat(32)}.jpg`]) {
+      const res = await fetch(`${mcp}${path}`, {
+        headers: { "x-api-key": KEY },
+        redirect: "manual",
+      });
+      expect(res.status).toBe(404);
+    }
+  });
+});
+
+describe("isSameOrigin", () => {
+  const req = (headers) => ({ get: (h) => headers[h.toLowerCase()] });
+  test.each([
+    [{ "sec-fetch-site": "same-origin" }, true],
+    [{ "sec-fetch-site": "same-site" }, false],
+    [{ "sec-fetch-site": "cross-site", origin: "https://meals.x" }, false],
+    [{ origin: "https://meals.x", host: "meals.x" }, true],
+    [
+      {
+        origin: "https://meals.x",
+        "x-forwarded-host": "meals.x",
+        host: "app:3001",
+      },
+      true,
+    ],
+    [{ origin: "https://evil.example", host: "meals.x" }, false],
+    [{ origin: "not a url", host: "meals.x" }, false],
+    [{ host: "meals.x" }, false],
+  ])("%o -> %s", (headers, ok) => {
+    expect(isSameOrigin(req(headers))).toBe(ok);
   });
 });

@@ -7,9 +7,25 @@
 import express from "express";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { isIsoDate, isMonday, weekOf, zurichToday } from "./domain/dates.js";
-import { buildHistoryView, buildWeekView } from "./web/view.js";
+import {
+  addDays,
+  isIsoDate,
+  isMonday,
+  weekOf,
+  zurichToday,
+} from "./domain/dates.js";
+import { buildHistoryView, buildWeekView, weekHeading } from "./web/view.js";
 import { renderWeekPng } from "./web/week-image.js";
+import multer from "multer";
+import {
+  isPlanImageId,
+  MAX_UPLOAD_BYTES,
+  planImagePath,
+  removePlanImage,
+  sanitiseImage,
+  UploadError,
+  writePlanImage,
+} from "./images/plan-image.js";
 import { dishKey } from "./images/dish.js";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -18,6 +34,7 @@ import {
   renderHistory,
   renderNotFound,
   renderOffline,
+  renderUpload,
   renderWeek,
 } from "./web/render.js";
 
@@ -77,10 +94,41 @@ export function contentSecurityPolicy(analytics = {}) {
     "img-src 'self'",
     "style-src 'self'",
     "base-uri 'none'",
-    "form-action 'none'",
+    "form-action 'self'",
     "frame-ancestors 'none'",
     "object-src 'none'",
   ].join("; ");
+}
+
+// A form POST must come from this site's own pages. Browsers send
+// Sec-Fetch-Site on every request (Safari since 16.4); older ones send
+// Origin on a POST, checked against the host the request came in on.
+export function isSameOrigin(req) {
+  const site = req.get("sec-fetch-site");
+  if (site) return site === "same-origin";
+  const origin = req.get("origin");
+  if (!origin) return false;
+  try {
+    const { host } = new URL(origin);
+    return [req.get("x-forwarded-host"), req.get("host")].includes(host);
+  } catch {
+    return false;
+  }
+}
+
+// The Mondays offered on the upload page: two weeks back to eight ahead,
+// plus the preselected one if it falls outside that.
+export function uploadWeeks(store, today, selected) {
+  const current = weekOf(today);
+  const starts = new Set(
+    Array.from({ length: 11 }, (_, i) => addDays(current, (i - 2) * 7)),
+  );
+  if (selected) starts.add(selected);
+  return [...starts].sort().map((weekStart) => ({
+    weekStart,
+    heading: weekHeading(weekStart),
+    planned: Boolean(store.getWeek(weekStart)),
+  }));
 }
 
 // A finished dish picture's URL; ?v changes when it is regenerated, so the
@@ -130,6 +178,17 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     res.sendFile(resolve(file));
   });
 
+  // Lisa's original plan images, behind the login like the pages. The name
+  // must be a 32-hex id the store knows, so nothing else is reachable.
+  app.get("/plan-images/:file", (req, res, next) => {
+    const m = /^([0-9a-f]{32})\.jpg$/.exec(req.params.file);
+    if (!m || !isPlanImageId(m[1]) || !store.getImage(m[1])) return next();
+    const file = planImagePath(config.planImagesDir, m[1]);
+    if (!existsSync(file)) return next();
+    res.set("Cache-Control", "private, max-age=2592000, immutable");
+    res.sendFile(resolve(file));
+  });
+
   // At the root so it can control every page. no-cache: the browser always
   // checks for a new release. Behind the login like the pages it caches.
   const swScript = serviceWorkerScript();
@@ -167,7 +226,8 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     if (!isIsoDate(date)) return page(res, 404, renderNotFound({ analytics }));
     if (!isMonday(date)) return res.redirect(302, `/week/${weekOf(date)}.png`);
     const week = store.getWeek(date);
-    if (!week) return page(res, 404, renderNotFound({ analytics }));
+    if (!week || week.status === "image_only")
+      return page(res, 404, renderNotFound({ analytics }));
     const png = await renderWeekPng(
       buildWeekView(week, date, zurichToday(now())),
     );
@@ -187,6 +247,95 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
       }),
     );
   });
+
+  // Upload Lisa's plan image (add-lisa-image-upload).
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 4 },
+  }).single("image");
+  const uploadPage = (res, status, today, selected, error) =>
+    page(
+      res,
+      status,
+      renderUpload({
+        weeks: uploadWeeks(store, today, selected),
+        selected,
+        error,
+        analytics,
+      }),
+    );
+
+  app.get("/upload", (req, res) => {
+    const today = zurichToday(now());
+    const asked = String(req.query.week ?? "");
+    const selected =
+      isIsoDate(asked) && isMonday(asked)
+        ? asked
+        : store.nextUnplannedMonday(weekOf(today));
+    uploadPage(res, 200, today, selected);
+  });
+
+  // Each upload holds up to 15 MB in memory plus sharp's decode, so only a
+  // couple run at once on the Pi.
+  let uploadsInFlight = 0;
+  const MAX_UPLOADS_IN_FLIGHT = 2;
+
+  app.post("/upload", (req, res, next) => {
+    const today = zurichToday(now());
+    if (!isSameOrigin(req))
+      return res.status(403).type("text").send("Forbidden");
+    if (uploadsInFlight >= MAX_UPLOADS_IN_FLIGHT)
+      return res
+        .status(503)
+        .set("Retry-After", "5")
+        .type("text")
+        .send("Busy saving another photo. Try again in a moment.");
+    uploadsInFlight++;
+    res.on("close", () => uploadsInFlight--);
+    upload(req, res, async (err) => {
+      try {
+        await handleUpload(req, res, next, err, today);
+      } catch (e) {
+        next(e);
+      }
+    });
+  });
+
+  async function handleUpload(req, res, next, err, today) {
+    const week = String(req.body?.week ?? "");
+    const selected = isIsoDate(week) && isMonday(week) ? week : null;
+    const fail = (status, message) =>
+      uploadPage(
+        res,
+        status,
+        today,
+        selected ?? store.nextUnplannedMonday(weekOf(today)),
+        message,
+      );
+    if (err?.code === "LIMIT_FILE_SIZE")
+      return fail(413, "That photo is over 15 MB. Choose a smaller one.");
+    if (err) return fail(400, "That upload didn't work. Try again.");
+    if (!selected) return fail(400, "Choose a week (a Monday).");
+    if (!req.file) return fail(400, "Choose a photo.");
+    try {
+      const jpeg = await sanitiseImage(req.file.buffer);
+      const saved = writePlanImage(config.planImagesDir, jpeg);
+      try {
+        store.attachImage(
+          selected,
+          { ...saved, original_name: req.file.originalname },
+          now().toISOString(),
+        );
+      } catch (e) {
+        removePlanImage(config.planImagesDir, saved.id);
+        throw e;
+      }
+      res.redirect(303, `/week/${selected}`);
+    } catch (e) {
+      if (e instanceof UploadError) return fail(400, e.message);
+      next(e);
+    }
+  }
 
   // The service worker's fallback for a page not saved on the phone.
   app.get("/offline", (_req, res) =>
