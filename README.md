@@ -7,8 +7,8 @@ Europe/Zurich), not images, so Claude can read history back, edit a single
 day and build each new plan on what we ate recently. Every write is logged,
 and any change can be undone.
 
-> **Status:** the data store, MCP server and phone viewer are built. PNG
-> sharing and Lisa's image upload are planned as OpenSpec changes in
+> **Status:** the data store, MCP server, phone viewer and week sharing are
+> built. Lisa's image upload is planned as an OpenSpec change in
 > [`openspec/changes/`](openspec/changes/).
 
 ## Phone viewer
@@ -32,6 +32,14 @@ with phone and desktop screenshots, from planning in Claude to the week view.
   desktop is off it waits and retries. Dinners out, leftovers and Kita are
   skipped (`DISH_IMAGE_SKIP`). Ask Claude to `regenerate_dish_image` for a
   bad one. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
+- **Share a week as a picture.** A planned week has a **Share** button. It
+  opens the phone's share sheet with the week as a PNG (Day | Lunch | Snacks
+  | Dinner | Notes, the heading, whose plan and the prep), so it goes straight
+  to WhatsApp: tap Share, pick WhatsApp, pick the chat, send. Where a browser
+  can't share files, the PNG downloads as `meals-YYYY-MM-DD.png` instead. The
+  picture is at `/week/YYYY-MM-DD.png`, behind the same login, drawn on the
+  server without a browser (satori, then resvg, with the bundled Inter font
+  in `assets/fonts/`) and fresh on every request. It needs a signal.
 - **Works offline.** A service worker (`src/web/static/sw.js`) saves each
   page you open, plus this week and history. With no signal (or none within
   4 s) the saved copy is shown under an "Offline" banner, with today re-marked

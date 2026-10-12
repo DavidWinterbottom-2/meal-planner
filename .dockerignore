@@ -1,4 +1,4 @@
-# Only package*.json and src/ are copied into the image; keep the build
+# Only package*.json, src/ and assets/ are copied into the image; keep the build
 # context small and free of local state and secrets.
 .git
 .github

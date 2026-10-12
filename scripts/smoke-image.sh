@@ -41,6 +41,8 @@ mcp -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_wee
 viewer="http://127.0.0.1:$viewer_port"
 curl -s "$viewer/week/2026-10-12" | grep -q 'Thomas at Kita' ||
   fail "viewer should render the seeded week"
+curl -s "$viewer/week/2026-10-12.png" | head -c 4 | grep -q 'PNG' ||
+  fail "viewer should render the seeded week as a PNG (satori, resvg, fonts)"
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$base/week/2026-10-12")" = 404 ] ||
   fail "MCP listener must not serve viewer pages"
 [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$viewer/mcp")" = 404 ] ||

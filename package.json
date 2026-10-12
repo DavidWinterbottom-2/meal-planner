@@ -1,6 +1,6 @@
 {
   "name": "meal-planner",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Family meal planner: phone web viewer plus an MCP server so Claude can plan, save and read our weekly meal plans.",
   "private": true,
   "type": "module",
@@ -24,8 +24,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "@resvg/resvg-js": "^2.6.2",
     "better-sqlite3": "^13.0.3",
     "express": "^5.2.1",
+    "satori": "^0.18.4",
     "zod": "^4.6.5"
   },
   "engines": {
