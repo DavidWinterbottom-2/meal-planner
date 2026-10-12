@@ -7,7 +7,14 @@ import { analyticsTag } from "./analytics.js";
 
 const PLAN_IN_CLAUDE = "https://claude.ai/new";
 
-function layout({ title, analytics, active, body, swipe = false }) {
+function layout({
+  title,
+  analytics,
+  active,
+  body,
+  swipe = false,
+  share = false,
+}) {
   return markup`<!doctype html>
 <html lang="en-GB">
 <head>
@@ -27,6 +34,7 @@ function layout({ title, analytics, active, body, swipe = false }) {
 <link rel="stylesheet" href="/static/app.css">
 <script type="module" src="/static/offline.js"></script>
 ${swipe ? raw('<script type="module" src="/static/swipe.js"></script>') : ""}
+${share ? raw('<script type="module" src="/static/share.js"></script>') : ""}
 ${raw(analyticsTag(analytics))}
 </head>
 <body>
@@ -77,6 +85,7 @@ export function renderWeek(view, { analytics } = {}) {
     <p class="mp-week__meta">
       <span class="wb-pill ${view.isCurrent ? "wb-pill--accent" : "wb-pill--neutral"}">${view.badge}</span>
       ${view.source ? markup`<span class="wb-label">${view.source}</span>` : ""}
+      ${view.planned ? markup`<button class="wb-btn wb-btn--secondary wb-btn--sm mp-share" type="button" data-share-week="${view.weekStart}">Share</button>` : ""}
     </p>
   </div>
   <nav class="mp-weeknav" aria-label="Weeks">
@@ -101,6 +110,7 @@ export function renderWeek(view, { analytics } = {}) {
     active: "week",
     body,
     swipe: true,
+    share: view.planned,
   });
 }
 

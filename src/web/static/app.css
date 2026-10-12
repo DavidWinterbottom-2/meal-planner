@@ -39,6 +39,11 @@ h1 {
   margin: 4px 0 0;
 }
 
+/* Share sits at the end of that line. */
+.mp-share {
+  margin-left: auto;
+}
+
 .mp-weeknav {
   display: flex;
   gap: 8px;

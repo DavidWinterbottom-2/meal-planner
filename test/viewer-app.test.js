@@ -89,7 +89,7 @@ describe("week pages", () => {
     expect(res.headers.get("location")).toBe("/week/2026-10-12");
   });
 
-  test.each(["2026-13-40", "2026-02-30", "monday", "2026-10-12.png"])(
+  test.each(["2026-13-40", "2026-02-30", "monday", "2026-10-12.html"])(
     "an invalid date (%s) is a 404 page",
     async (date) => {
       const res = await get(`${viewer}/week/${date}`);
@@ -161,17 +161,69 @@ describe("installable app", () => {
   });
 });
 
+describe("week picture", () => {
+  const png = (date) => get(`${viewer}/week/${date}.png`);
+  const isPng = (buf) => buf.subarray(1, 4).toString() === "PNG";
+
+  test("a planned week is an uncached PNG, never the HTML page", async () => {
+    const res = await png("2026-10-12");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(isPng(buf)).toBe(true);
+    expect(buf.readUInt32BE(16)).toBeGreaterThanOrEqual(1080);
+  });
+
+  test("an unplanned week or a bad date is a 404", async () => {
+    expect((await png("2026-11-02")).status).toBe(404);
+    expect((await png("2026-02-30")).status).toBe(404);
+  });
+
+  test("a non-Monday date redirects to its Monday's picture", async () => {
+    const res = await png("2026-10-15");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/week/2026-10-12.png");
+  });
+
+  test("reflects an update, and the undo after it", async () => {
+    const bytes = async () =>
+      Buffer.from(await (await png("2026-10-12")).arrayBuffer());
+    const before = await bytes();
+    store.updateDay(
+      "2026-10-16",
+      { dinner: "A very different dinner with a much longer name than before" },
+      "2026-10-15T09:00:00.000Z",
+    );
+    const after = await bytes();
+    expect(after.equals(before)).toBe(false);
+    store.undoLastChange("2026-10-15T09:01:00.000Z");
+    expect((await bytes()).equals(before)).toBe(true);
+  });
+
+  test("a planned week's page has the Share button; an unplanned one doesn't", async () => {
+    const planned = await (await get(`${viewer}/week/2026-10-12`)).text();
+    expect(planned).toMatch(/data-share-week="2026-10-12"/);
+    expect(planned).toMatch(/src="\/static\/share\.js"/);
+    const empty = await (await get(`${viewer}/week/2026-11-02`)).text();
+    expect(empty).not.toMatch(/data-share-week|share\.js/);
+  });
+});
+
 describe("the two listeners never overlap", () => {
-  test.each(["/", "/week/2026-10-12", "/history", "/manifest.webmanifest"])(
-    "MCP listener does not serve viewer path %s",
-    async (path) => {
-      const res = await fetch(`${mcp}${path}`, {
-        headers: { "x-api-key": KEY },
-        redirect: "manual",
-      });
-      expect(res.status).toBe(404);
-    },
-  );
+  test.each([
+    "/",
+    "/week/2026-10-12",
+    "/week/2026-10-12.png",
+    "/history",
+    "/manifest.webmanifest",
+  ])("MCP listener does not serve viewer path %s", async (path) => {
+    const res = await fetch(`${mcp}${path}`, {
+      headers: { "x-api-key": KEY },
+      redirect: "manual",
+    });
+    expect(res.status).toBe(404);
+  });
 
   test.each([
     ["GET", "/mcp"],
