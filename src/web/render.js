@@ -73,9 +73,11 @@ function dayRow(day) {
 export function renderWeek(view, { analytics } = {}) {
   const body = markup`<section class="mp-week">
   <div class="mp-week__head">
-    <span class="wb-pill ${view.isCurrent ? "wb-pill--accent" : "wb-pill--neutral"}">${view.badge}</span>
     <h1>${view.heading}</h1>
-    ${view.source ? markup`<p class="wb-label">${view.source}</p>` : ""}
+    <p class="mp-week__meta">
+      <span class="wb-pill ${view.isCurrent ? "wb-pill--accent" : "wb-pill--neutral"}">${view.badge}</span>
+      ${view.source ? markup`<span class="wb-label">${view.source}</span>` : ""}
+    </p>
   </div>
   <nav class="mp-weeknav" aria-label="Weeks">
     <a class="wb-btn wb-btn--secondary wb-btn--sm" rel="prev" href="/week/${view.prev}">‹ Prev</a>

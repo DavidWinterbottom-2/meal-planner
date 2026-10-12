@@ -26,8 +26,17 @@ h1 {
   line-height: 1.25;
 }
 
-.mp-week__head .wb-label {
-  margin: 2px 0 0;
+.mp-week__head h1 {
+  margin-top: 0;
+}
+
+/* The week badge and whose plan it is share one line under the date. */
+.mp-week__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
 }
 
 .mp-weeknav {
