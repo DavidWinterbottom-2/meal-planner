@@ -28,20 +28,29 @@ export function readConfig(env) {
   if (!Number.isInteger(tokenTtlHours) || tokenTtlHours <= 0)
     errors.push("OAUTH_TOKEN_TTL_H must be a positive integer");
   // Dish pictures (OpenSpec add-dish-images): off unless FOOD_IMAGE_URL is set.
-  const foodImageUrl = (env.FOOD_IMAGE_URL ?? "").trim().replace(/\/+$/, "");
+  // An optional extra, so a half-done setup switches them off with a
+  // warning instead of keeping the whole app (MCP and viewer) from starting.
+  const warnings = [];
+  let foodImageUrl = (env.FOOD_IMAGE_URL ?? "").trim().replace(/\/+$/, "");
   const foodImageKey = env.FOOD_IMAGE_API_KEY ?? "";
   if (foodImageUrl) {
+    const problems = [];
     if (!/^https?:\/\/[^\s/]+/.test(foodImageUrl))
-      errors.push("FOOD_IMAGE_URL must be an http(s) URL");
+      problems.push("FOOD_IMAGE_URL must be an http(s) URL");
     if (foodImageKey.length < 32)
-      errors.push(
+      problems.push(
         "FOOD_IMAGE_API_KEY must be set (at least 32 characters) when FOOD_IMAGE_URL is",
       );
+    if (problems.length) {
+      warnings.push(`Dish pictures are off: ${problems.join("; ")}`);
+      foodImageUrl = "";
+    }
   }
   if (errors.length)
     throw new Error(`Invalid configuration:\n- ${errors.join("\n- ")}`);
 
   return {
+    warnings,
     port,
     viewerPort,
     baseUrl: (env.BASE_URL || `http://localhost:${port}`).replace(/\/+$/, ""),

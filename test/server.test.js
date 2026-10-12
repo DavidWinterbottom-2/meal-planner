@@ -36,6 +36,36 @@ describe("startServer", () => {
     }
   });
 
+  test("a picture URL without its key (the Pi on 2026-10-12) still starts, pictures off, with a warning", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "meals-"));
+    const logs = [];
+    try {
+      const running = await startServer({
+        env: {
+          MCP_API_KEY: KEY,
+          PORT: "0",
+          VIEWER_PORT: "0",
+          MEALS_DB: join(dir, "meals.db"),
+          FOOD_IMAGE_URL: "http://100.107.22.70:8190",
+          FOOD_IMAGE_API_KEY: "",
+        },
+        host: "127.0.0.1",
+        log: (m) => logs.push(m),
+      });
+      const port = running.servers[0].address().port;
+      expect((await fetch(`http://127.0.0.1:${port}/health`)).status).toBe(200);
+      expect(logs).toContainEqual(
+        expect.stringMatching(
+          /^WARNING: Dish pictures are off: FOOD_IMAGE_API_KEY/,
+        ),
+      );
+      expect(running.config.dishImages.url).toBe("");
+      await running.stop();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("starts, seeds, serves /health, and stops every listener and the store", async () => {
     const dir = mkdtempSync(join(tmpdir(), "meals-"));
     const logs = [];

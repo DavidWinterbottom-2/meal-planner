@@ -201,18 +201,24 @@ describe("readConfig", () => {
     expect(c.dishImages.skip).toContain("ikea");
   });
 
-  test("dish pictures need a key and a valid URL when switched on", () => {
+  test("dish pictures need a key and a valid URL; without them they're off, with a warning, and the app still starts", () => {
     const base = { MCP_API_KEY: "k".repeat(64) };
-    expect(() =>
-      readConfig({ ...base, FOOD_IMAGE_URL: "http://desktop-home:8190" }),
-    ).toThrow(/FOOD_IMAGE_API_KEY/);
-    expect(() =>
-      readConfig({
-        ...base,
-        FOOD_IMAGE_URL: "desktop-home:8190",
-        FOOD_IMAGE_API_KEY: "k".repeat(40),
-      }),
-    ).toThrow(/FOOD_IMAGE_URL/);
+    const noKey = readConfig({
+      ...base,
+      FOOD_IMAGE_URL: "http://desktop-home:8190",
+      FOOD_IMAGE_API_KEY: "short",
+    });
+    expect(noKey.dishImages.url).toBe("");
+    expect(noKey.warnings).toEqual([
+      expect.stringMatching(/Dish pictures are off: FOOD_IMAGE_API_KEY/),
+    ]);
+    const badUrl = readConfig({
+      ...base,
+      FOOD_IMAGE_URL: "desktop-home:8190",
+      FOOD_IMAGE_API_KEY: "k".repeat(40),
+    });
+    expect(badUrl.dishImages.url).toBe("");
+    expect(badUrl.warnings[0]).toMatch(/FOOD_IMAGE_URL must be an http/);
     const c = readConfig({
       ...base,
       FOOD_IMAGE_URL: "http://desktop-home:8190/",
@@ -223,6 +229,7 @@ describe("readConfig", () => {
       url: "http://desktop-home:8190",
       skip: ["pizza", "out"],
     });
+    expect(c.warnings).toEqual([]);
   });
 
   test("requires a long MCP_API_KEY", () => {

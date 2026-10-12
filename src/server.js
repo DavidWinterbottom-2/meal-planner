@@ -31,6 +31,7 @@ export async function startServer({
   log = console.log,
 }) {
   const config = readConfig(env);
+  for (const warning of config.warnings) log(`WARNING: ${warning}`);
   const store = openStore(config.dbPath);
   const seeded = seedIfEmpty(store, now().toISOString());
   if (seeded) log(`Seeded ${seeded} example weeks into an empty database`);
