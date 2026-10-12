@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Keeps Lisa's original plan images alongside the structured weeks. David can upload one from his phone, see it in the viewer, and have Claude read it for transcription.
+Keeps Lisa's original plan images alongside the structured weeks. David can upload one from his phone and see it in the viewer; Claude still transcribes from the image shared into the chat.
 
 ## ADDED Requirements
 
@@ -78,12 +78,3 @@ The empty-week state SHALL include an "Upload Lisa's plan" link to `/upload`, wi
 
 - **WHEN** "Upload Lisa's plan" is tapped on empty week 2026-11-02
 - **THEN** `/upload` opens with 2026-11-02 selected
-
-### Requirement: Images returned to Claude
-
-`get_week_plan` SHALL include a week's image as MCP image content (base64, with its MIME type) alongside the week's data, and say in text whether the week is "image_only" and needs transcribing.
-
-#### Scenario: Image-only week via MCP
-
-- **WHEN** Claude calls `get_week_plan("2026-10-19")` for an image-only week
-- **THEN** the result contains an image content block and text saying the week needs transcribing
