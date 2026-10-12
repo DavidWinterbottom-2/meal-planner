@@ -32,7 +32,12 @@ Flatnotes; the meal plans live in the Meal Planner.
 1. Read the image. If the week isn't clear from it, ask me which Monday it
    starts on. `get_planning_context` gives the next unplanned Monday.
 2. Show me what you read as a table and ask me to confirm.
-3. Save it with `save_week_plan`, with source "Lisa".
+3. Save it with `save_week_plan`, with source "Lisa". If I've already
+   uploaded her photo in the viewer, the week shows as image only; saving
+   keeps the photo attached.
+
+If `get_planning_context` lists image-only weeks, ask me to share that
+photo with you: you can't open the uploaded copy yourself.
 
 **Small changes**
 

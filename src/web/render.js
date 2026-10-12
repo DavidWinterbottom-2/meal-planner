@@ -43,6 +43,7 @@ ${raw(analyticsTag(analytics))}
   <nav class="wb-nav">
     <a href="/"${raw(active === "week" ? ' aria-current="page"' : "")}>Week</a>
     <a href="/history"${raw(active === "history" ? ' aria-current="page"' : "")}>History</a>
+    <a href="/upload"${raw(active === "upload" ? ' aria-current="page"' : "")}>Upload</a>
   </nav>
   <div class="wb-acct">
     <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Switch theme"><span data-wb-theme-icon>☀</span></button>
@@ -85,7 +86,7 @@ export function renderWeek(view, { analytics } = {}) {
     <p class="mp-week__meta">
       <span class="wb-pill ${view.isCurrent ? "wb-pill--accent" : "wb-pill--neutral"}">${view.badge}</span>
       ${view.source ? markup`<span class="wb-label">${view.source}</span>` : ""}
-      ${view.planned ? markup`<button class="wb-btn wb-btn--secondary wb-btn--sm mp-share" type="button" data-share-week="${view.weekStart}">Share</button>` : ""}
+      ${view.planned && !view.imageOnly ? markup`<button class="wb-btn wb-btn--secondary wb-btn--sm mp-share" type="button" data-share-week="${view.weekStart}">Share</button>` : ""}
     </p>
   </div>
   <nav class="mp-weeknav" aria-label="Weeks">
@@ -94,13 +95,20 @@ export function renderWeek(view, { analytics } = {}) {
     <a class="wb-btn wb-btn--secondary wb-btn--sm" rel="next" href="/week/${view.next}">Next ›</a>
   </nav>
   ${
-    view.planned
-      ? markup`<ol class="mp-days">${view.days.map(dayRow)}</ol>
+    view.imageOnly
+      ? markup`<figure class="mp-original mp-original--full">
+    <a href="${view.original}"><img src="${view.original}" alt="Lisa's plan for ${view.heading}"></a>
+    <figcaption class="wb-muted">Lisa's plan, not typed in yet. Tap to zoom.</figcaption>
+  </figure>`
+      : view.planned
+        ? markup`<ol class="mp-days">${view.days.map(dayRow)}</ol>
   ${view.prep ? markup`<section class="mp-block"><h2 class="wb-eyebrow">Prep</h2><p class="mp-pre">${view.prep}</p></section>` : ""}
-  ${view.notes ? markup`<section class="mp-block"><h2 class="wb-eyebrow">Notes</h2><p class="mp-pre">${view.notes}</p></section>` : ""}`
-      : markup`<div class="mp-empty">
+  ${view.notes ? markup`<section class="mp-block"><h2 class="wb-eyebrow">Notes</h2><p class="mp-pre">${view.notes}</p></section>` : ""}
+  ${view.original ? markup`<details class="mp-block mp-original"><summary class="wb-eyebrow">Lisa's original</summary><a href="${view.original}"><img src="${view.original}" alt="Lisa's original plan" loading="lazy"></a></details>` : ""}`
+        : markup`<div class="mp-empty">
     <p>Nothing planned for this week yet.</p>
     <a class="wb-btn wb-btn--primary" href="${PLAN_IN_CLAUDE}">Plan it in Claude</a>
+    <a class="wb-btn wb-btn--secondary" href="/upload?week=${view.weekStart}">Upload Lisa's plan</a>
   </div>`
   }
 </section>`;
@@ -110,7 +118,7 @@ export function renderWeek(view, { analytics } = {}) {
     active: "week",
     body,
     swipe: true,
-    share: view.planned,
+    share: view.planned && !view.imageOnly,
   });
 }
 
@@ -135,6 +143,31 @@ export function renderHistory(entries, { analytics } = {}) {
     active: "history",
     body,
   });
+}
+
+// The upload form. `weeks` are the Mondays offered, `selected` the one
+// preselected; `error` is shown above the form after a rejected upload.
+export function renderUpload({ weeks, selected, error, analytics } = {}) {
+  const body = markup`<section class="mp-upload">
+  <h1>Upload Lisa's plan</h1>
+  <p class="wb-muted">Pick the week and her photo. Location and other details are removed before it's saved. Share the same photo with Claude to type it in.</p>
+  ${error ? markup`<p class="wb-error" role="alert">${error}</p>` : ""}
+  <form class="wb-card mp-upload__form" method="post" action="/upload" enctype="multipart/form-data">
+    <div class="wb-field">
+      <label for="week">Week</label>
+      <select class="wb-select" id="week" name="week">${weeks.map(
+        (w) =>
+          markup`<option value="${w.weekStart}"${raw(w.weekStart === selected ? " selected" : "")}>${w.heading}${w.planned ? " · planned" : ""}</option>`,
+      )}</select>
+    </div>
+    <div class="wb-field">
+      <label for="image">Photo</label>
+      <input class="wb-input" id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/*" required>
+    </div>
+    <button class="wb-btn wb-btn--primary" type="submit">Save</button>
+  </form>
+</section>`;
+  return layout({ title: "Meals · Upload", analytics, active: "upload", body });
 }
 
 export function renderNotFound({ analytics } = {}) {

@@ -45,6 +45,12 @@ curl -s "$viewer/week/2026-10-12" | grep -q 'Thomas at Kita' ||
 # SIGPIPE fails the check under pipefail.
 [ "$(curl -s "$viewer/week/2026-10-12.png" | od -An -c -j1 -N3 | tr -d ' ')" = PNG ] ||
   fail "viewer should render the seeded week as a PNG (satori, resvg, fonts)"
+# An upload goes through sharp (the Pi's prebuilt libvips) and shows up.
+[ "$(curl -s -o /dev/null -w '%{http_code}' -H 'Sec-Fetch-Site: same-origin' \
+  -F week=2026-11-02 -F "image=@src/web/static/icons/icon-192.png" "$viewer/upload")" = 303 ] ||
+  fail "uploading an image should redirect to its week"
+curl -s "$viewer/week/2026-11-02" | grep -q '/plan-images/' ||
+  fail "the uploaded image should show on its week"
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$base/week/2026-10-12")" = 404 ] ||
   fail "MCP listener must not serve viewer pages"
 [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$viewer/mcp")" = 404 ] ||

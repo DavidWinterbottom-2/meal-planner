@@ -35,7 +35,8 @@ function isAsset(url) {
   return (
     url.pathname.startsWith("/static/") ||
     url.pathname.startsWith("/icons/") ||
-    url.pathname.startsWith("/dish-images/")
+    url.pathname.startsWith("/dish-images/") ||
+    url.pathname.startsWith("/plan-images/")
   );
 }
 

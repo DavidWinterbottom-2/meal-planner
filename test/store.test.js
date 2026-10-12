@@ -43,6 +43,13 @@ describe("schema", () => {
       "prep",
       "notes",
       "updated_at",
+      "image_id",
+    ]);
+    expect(cols("image")).toEqual([
+      "id",
+      "filename",
+      "original_name",
+      "uploaded_at",
     ]);
     expect(cols("day")).toContain("afternoon_snack");
     expect(cols("history")).toContain("undoes_id");
@@ -54,7 +61,7 @@ describe("schema", () => {
       "error",
       "updated_at",
     ]);
-    expect(store._db.pragma("user_version", { simple: true })).toBe(2);
+    expect(store._db.pragma("user_version", { simple: true })).toBe(3);
   });
 
   test("reopening an existing file keeps its data", () => {
@@ -468,5 +475,78 @@ describe("architecture review follow-ups", () => {
       dinner: "Old dinner",
       lunch: null,
     });
+  });
+});
+
+describe("attachImage (Lisa's original)", () => {
+  const img = (id) => ({
+    id: id.repeat(32).slice(0, 32),
+    filename: `${id.repeat(32).slice(0, 32)}.jpg`,
+    original_name: "IMG_1234.jpg",
+  });
+
+  test("an unplanned week becomes image_only, from Lisa, with the image", () => {
+    const week = store.attachImage("2026-10-19", img("a"), T1);
+    expect(week).toMatchObject({
+      week_start: "2026-10-19",
+      source: "Lisa",
+      status: "image_only",
+      image_id: img("a").id,
+    });
+    expect(week.days).toHaveLength(7);
+    expect(store.getImage(img("a").id)).toMatchObject({
+      original_name: "IMG_1234.jpg",
+      uploaded_at: T1,
+    });
+    expect(history().at(-1).kind).toBe("create");
+  });
+
+  test("a week with data keeps its data and status; a new upload replaces the old", () => {
+    store.saveWeek(plan(), T1);
+    store.attachImage("2026-10-12", img("a"), T2);
+    const week = store.attachImage("2026-10-12", img("b"), T3);
+    expect(week.status).toBe("data");
+    expect(week.source).toBe("David");
+    expect(week.days[0].dinner).toBe("Fish nuggets");
+    expect(week.image_id).toBe(img("b").id);
+    expect(history().at(-1).kind).toBe("replace");
+  });
+
+  test("transcribing keeps the image and sets the status to data", () => {
+    store.attachImage("2026-10-19", img("a"), T1);
+    const saved = store.saveWeek(
+      plan({ week_start: "2026-10-19", source: "Lisa", days: [] }),
+      T2,
+    );
+    expect(saved.status).toBe("data");
+    expect(saved.image_id).toBe(img("a").id);
+  });
+
+  test("undo removes an upload that created a week, and restores a replaced image", () => {
+    store.attachImage("2026-10-19", img("a"), T1);
+    store.undoLastChange(T2);
+    expect(store.getWeek("2026-10-19")).toBeNull();
+
+    store.saveWeek(plan(), T1);
+    store.attachImage("2026-10-12", img("b"), T2);
+    store.attachImage("2026-10-12", img("c"), T3);
+    store.undoLastChange(T3);
+    expect(store.getWeek("2026-10-12").image_id).toBe(img("b").id);
+    store.undoLastChange(T3);
+    expect(store.getWeek("2026-10-12").image_id).toBeNull();
+  });
+
+  test("a snapshot from before images existed restores with no image", async () => {
+    const { normalizeSnapshot } = await import("../src/store.js");
+    expect(
+      normalizeSnapshot({ week_start: "2026-10-12", updated_at: T1 }).image_id,
+    ).toBeNull();
+  });
+
+  test("only Mondays; imageIds lists every stored image", () => {
+    expect(() => store.attachImage("2026-10-14", img("a"), T1)).toThrow();
+    store.attachImage("2026-10-19", img("d"), T1);
+    expect(store.imageIds()).toEqual(new Set([img("d").id]));
+    expect(store.getImage("nope")).toBeNull();
   });
 });

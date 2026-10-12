@@ -215,3 +215,40 @@ h1 {
   color: var(--ink-2);
   font-size: 0.88rem;
 }
+
+/* Lisa's original plan image (add-lisa-image-upload). */
+.mp-original img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.mp-original--full {
+  margin: 14px 0 0;
+}
+.mp-original--full figcaption {
+  margin-top: 6px;
+  font-size: 0.85rem;
+}
+details.mp-original summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.mp-empty .wb-btn + .wb-btn {
+  margin-left: 6px;
+}
+
+.mp-upload__form {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+.mp-upload__form .wb-btn {
+  justify-self: start;
+}
+.mp-upload .wb-error {
+  color: var(--neg);
+  font-weight: 600;
+}

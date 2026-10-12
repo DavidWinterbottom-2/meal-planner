@@ -7,8 +7,9 @@ Europe/Zurich), not images, so Claude can read history back, edit a single
 day and build each new plan on what we ate recently. Every write is logged,
 and any change can be undone.
 
-> **Status:** the data store, MCP server, phone viewer and week sharing are
-> built. Lisa's image upload is planned as an OpenSpec change in
+> **Status:** the data store, MCP server, phone viewer, week sharing and
+> Lisa's image upload are built. Further changes are planned as OpenSpec
+> changes in
 > [`openspec/changes/`](openspec/changes/).
 
 ## Phone viewer
@@ -106,12 +107,25 @@ a WhatsApp image.
 
 ### Lisa's plans
 
-The **only route today**: share Lisa's WhatsApp image into the Claude app and
-say "save Lisa's plan". Claude reads the image, confirms the week, and calls
-`save_week_plan` with `source="Lisa"`. The structured data is saved, but the
-image is not. An upload page that keeps the original image is planned
-(`add-lisa-image-upload`). It is gated on a test of whether claude.ai shows
-images returned by MCP tools.
+Two steps, in either order:
+
+1. **Keep her original.** In the viewer, tap **Upload** (or **Upload Lisa's
+   plan** on an empty week), pick the week and her photo, and save. The
+   photo is re-encoded as a JPEG with its location and other metadata
+   removed, its long edge capped at 2000px, and stored next to the database
+   (`PLAN_IMAGES_DIR`, default `/data/plan-images`). JPEG, PNG and WebP up to
+   15 MB; HEIC is refused with a hint (WhatsApp images are JPEG anyway). A
+   week with no plan becomes "image only" and shows the photo full width,
+   tap to zoom; a week that already has data keeps it and shows the photo
+   under **Lisa's original**. A new upload replaces the old one, and undo
+   reverses an upload like any other change.
+2. **Type it in.** Share the same image into the Claude app and say "save
+   Lisa's plan". Claude reads it and calls `save_week_plan` with
+   `source="Lisa"`. The image stays attached and the week becomes data.
+
+Claude doesn't read the stored image itself through MCP; that is a later
+change, gated on a test of whether claude.ai shows images returned by MCP
+tools.
 
 ## Run locally
 
