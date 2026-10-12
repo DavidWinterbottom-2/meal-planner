@@ -50,6 +50,13 @@ describe("renderWeek", () => {
     ],
   };
 
+  test("the week badge sits under the date, on the line with whose plan it is", () => {
+    const out = renderWeek(buildWeekView(week, "2026-10-12", "2026-10-15"));
+    expect(out).toMatch(
+      /<h1>[^<]*<\/h1>\s*<p class="mp-week__meta">\s*<span class="wb-pill wb-pill--accent">This week<\/span>\s*<span class="wb-label">Lisa&#39;s plan<\/span>/,
+    );
+  });
+
   test("shows the plan with user text escaped", () => {
     const out = renderWeek(buildWeekView(week, "2026-10-12", "2026-10-15"));
     expect(out).toMatch(/&lt;b&gt;Fish&lt;\/b&gt; &amp; chips/);
