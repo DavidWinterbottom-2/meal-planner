@@ -82,6 +82,9 @@ export function buildWeekView(week, weekStart, today, imageFor = () => null) {
         lunch,
         kita: lunch === "Thomas at Kita",
         snacks: snack,
+        // Kept apart for the share picture's Morning / Afternoon tea columns.
+        morning_snack: d.morning_snack || null,
+        afternoon_snack: d.afternoon_snack || null,
         note: d.note || null,
         empty: !(d.dinner || lunch || snack || d.note),
       };
