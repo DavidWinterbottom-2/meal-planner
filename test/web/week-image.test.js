@@ -2,7 +2,9 @@ import { describe, test, expect } from "vitest";
 import {
   buildImageTree,
   COLUMNS,
+  dinnerTint,
   IMAGE_WIDTH,
+  noteLines,
   renderWeekPng,
 } from "../../src/web/week-image.js";
 import { buildWeekView } from "../../src/web/view.js";
@@ -27,59 +29,110 @@ const pngSize = (png) => ({
   height: png.readUInt32BE(20),
 });
 
-describe("buildImageTree", () => {
-  const tree = buildImageTree(seededView());
-  const [heading, source, table] = tree.props.children;
-  const [header, ...rows] = table.props.children;
+// Every image src in a tree.
+function images(node) {
+  if (node == null || typeof node !== "object") return [];
+  if (Array.isArray(node)) return node.flatMap(images);
+  return [
+    ...(node.type === "img" ? [node.props.src] : []),
+    ...images(node.props.children),
+  ];
+}
 
-  test("at least 1080px wide, light background", () => {
+describe("buildImageTree (Lisa's layout)", () => {
+  const tree = buildImageTree(seededView());
+  const card = tree.props.children[0];
+  const [banner, header, ...rest] = card.props.children;
+  const rows = rest.slice(0, 7);
+
+  test("at least 1080px wide, on Lisa's warm cream", () => {
     expect(IMAGE_WIDTH).toBeGreaterThanOrEqual(1080);
     expect(tree.props.style.width).toBe(IMAGE_WIDTH);
-    expect(tree.props.style.backgroundColor).toBe("#f3f5f8");
+    expect(tree.props.style.backgroundColor).toBe("#f4f2ea");
   });
 
-  test("heading and source above a Day | Lunch | Snacks | Dinner | Notes table", () => {
-    expect(texts(heading)).toEqual(["Mon 12 – Sun 18 Oct"]);
-    expect(texts(source)).toEqual(["David's plan"]);
+  test("serif week title and whose plan, over Day | Morning tea | Lunch | Afternoon tea | Dinner | Notes", () => {
+    expect(texts(banner)).toEqual(["Mon 12 – Sun 18 Oct", "David's plan"]);
+    expect(banner.props.children[0].props.style.fontFamily).toBe("Lora");
     expect(texts(header)).toEqual([
       "Day",
+      "Morning tea",
       "Lunch",
-      "Snacks",
+      "Afternoon tea",
       "Dinner",
       "Notes",
     ]);
-    expect(COLUMNS.reduce((sum, c) => sum + c.width, 0)).toBeLessThanOrEqual(
-      IMAGE_WIDTH - 80,
+    // Each meal column header carries its icon.
+    expect(images(header)).toHaveLength(5);
+    const gaps = 6 * (COLUMNS.length - 1);
+    expect(COLUMNS.reduce((sum, c) => sum + c.width, 0) + gaps).toBe(
+      IMAGE_WIDTH - 2 * 36 - 2 * 28,
     );
   });
 
-  test("seven day rows, Kita reads as where Thomas is", () => {
+  test("seven day rows: full day name, date, the two snacks apart, Kita, the day's note", () => {
     expect(rows).toHaveLength(7);
-    expect(texts(rows[0])[0]).toBe("Mon 12 Oct");
-    expect(texts(rows[6])[0]).toBe("Sun 18 Oct");
-    expect(texts(rows[0])[1]).toBe("Thomas at Kita");
-  });
-
-  test("snacks combine the morning and afternoon snack; empty cells show —", () => {
+    expect(texts(rows[0]).slice(0, 2)).toEqual(["Monday", "12 Oct"]);
+    expect(texts(rows[6])[0]).toBe("Sunday");
+    expect(texts(rows[0])[3]).toBe("Thomas at Kita");
     const view = seededView();
     view.days[3] = {
       ...view.days[3],
-      snacks: "Fruit · Crackers + cheese",
-      note: null,
+      morning_snack: "Fruit",
+      afternoon_snack: "Crackers + cheese",
+      note: "Cleaner 1:30–5pm",
     };
-    const row = buildImageTree(view).props.children[2].props.children[4];
-    expect(texts(row)[2]).toBe("Fruit · Crackers + cheese");
-    expect(texts(row)[4]).toBe("—");
+    const thu = buildImageTree(view).props.children[0].props.children[5];
+    expect(texts(thu)).toEqual([
+      "Thursday",
+      "15 Oct",
+      "Fruit",
+      view.days[3].lunch,
+      "Crackers + cheese",
+      view.days[3].dinner,
+      "Cleaner 1:30–5pm",
+    ]);
   });
 
-  test("the prep block only when the week has prep", () => {
-    expect(texts(tree)).not.toContain("PREP");
+  test("empty cells show –", () => {
+    // Monday has no snacks in the seed.
+    expect(texts(rows[0])[2]).toBe("–");
+    expect(texts(rows[0])[4]).toBe("–");
+  });
+
+  test("food pictures appear in every meal cell that has one", () => {
+    const pic = "data:image/jpeg;base64,AAAA";
+    const withPics = buildImageTree(seededView(), {
+      dishPicture: (text) =>
+        text === "Fruit" || text === "Homemade pizza" ? pic : null,
+    });
+    const all = images(withPics).filter((src) => src === pic);
+    expect(all.length).toBeGreaterThanOrEqual(2);
+    expect(
+      images(tree).filter((src) => src.startsWith("data:image/jpeg")),
+    ).toEqual([]);
+  });
+
+  test("dinner tints: stable per dish, pink for leftovers", () => {
+    expect(dinnerTint("Homemade pizza")).toBe(dinnerTint("Homemade pizza"));
+    expect(dinnerTint("Use-It-Up Night: leftovers")).toBe("#f8e0e0");
+    expect(dinnerTint(null)).toBe("#e4ecdc");
+  });
+
+  test("the week notes box: prep and notes as bullets, only when there are some", () => {
+    expect(texts(card)).not.toContain("WEEK NOTES");
+    expect(
+      noteLines({
+        prep: "- Thaw meatballs\n\n• Batch sauce",
+        notes: "Swim Sat",
+      }),
+    ).toEqual(["Thaw meatballs", "Batch sauce", "Swim Sat"]);
     const withPrep = buildImageTree({
       ...seededView(),
       prep: "Thaw meatballs",
     });
     expect(texts(withPrep)).toEqual(
-      expect.arrayContaining(["PREP", "Thaw meatballs"]),
+      expect.arrayContaining(["WEEK NOTES", "•", "Thaw meatballs"]),
     );
   });
 });

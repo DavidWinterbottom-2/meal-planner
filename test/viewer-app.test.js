@@ -2,6 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import {
   contentSecurityPolicy,
   createViewerApp,
+  dishThumbnails,
   isSameOrigin,
   MANIFEST,
 } from "../src/viewer-app.js";
@@ -566,5 +567,65 @@ describe("isSameOrigin", () => {
     [{ host: "meals.x" }, false],
   ])("%o -> %s", (headers, ok) => {
     expect(isSameOrigin(req(headers))).toBe(ok);
+  });
+});
+
+describe("food pictures in the share picture", () => {
+  test("finished pictures of any meal become thumbnails; others and broken files are left out", async () => {
+    const { writeFileSync } = await import("node:fs");
+    const { dishKey } = await import("../src/images/dish.js");
+    const dir = mkdtempSync(join(tmpdir(), "thumbs-"));
+    const s = openStore();
+    try {
+      s.saveWeek(
+        {
+          week_start: "2026-10-12",
+          days: [
+            {
+              date: "2026-10-12",
+              morning_snack: "Fruit",
+              lunch: "Kita",
+              dinner: "Fish pie",
+            },
+            { date: "2026-10-13", dinner: "Rack of lamb" },
+          ],
+        },
+        "2026-10-10T00:00:00.000Z",
+      );
+      expect(s.syncDishImages("2026-10-10T00:00:00.000Z")).toBe(4);
+      expect(s.getDish(dishKey("Fruit")).status).toBe("pending");
+      expect(s.getDish(dishKey("Kita")).status).toBe("skipped");
+      const real = await sharp({
+        create: { width: 300, height: 300, channels: 3, background: "#c84" },
+      })
+        .png()
+        .toBuffer();
+      for (const text of ["Fish pie", "Fruit", "Rack of lamb"]) {
+        s.updateDish(
+          dishKey(text),
+          { status: "done", attempts: 0 },
+          "2026-10-11T00:00:00.000Z",
+        );
+      }
+      writeFileSync(join(dir, `${dishKey("Fish pie")}.png`), real);
+      writeFileSync(join(dir, `${dishKey("Fruit")}.png`), real);
+      writeFileSync(join(dir, `${dishKey("Rack of lamb")}.png`), "broken");
+      const thumbs = await dishThumbnails(s, dir, [
+        "Fish pie",
+        "Fruit",
+        "Rack of lamb",
+        "Kita",
+        null,
+        "Unknown",
+      ]);
+      expect([...thumbs.keys()].sort()).toEqual(["Fish pie", "Fruit"]);
+      const meta = await sharp(
+        Buffer.from(thumbs.get("Fruit").split(",")[1], "base64"),
+      ).metadata();
+      expect(meta).toMatchObject({ format: "jpeg", width: 176, height: 176 });
+    } finally {
+      s.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

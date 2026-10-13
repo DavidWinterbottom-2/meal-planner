@@ -17,6 +17,7 @@ import {
 import { buildHistoryView, buildWeekView, weekHeading } from "./web/view.js";
 import { renderWeekPng } from "./web/week-image.js";
 import multer from "multer";
+import sharp from "sharp";
 import {
   isPlanImageId,
   MAX_UPLOAD_BYTES,
@@ -131,6 +132,39 @@ export function uploadWeeks(store, today, selected) {
   }));
 }
 
+// Finished food pictures for the share image, shrunk to thumbnails as data
+// URIs: meal text -> data URI. Missing, pending or skipped meals are left
+// out. Cached by key and picture time, so a regenerated picture is reloaded.
+const thumbCache = new Map();
+export async function dishThumbnails(store, dir, texts) {
+  const out = new Map();
+  for (const text of new Set(texts.filter(Boolean))) {
+    const key = dishKey(text);
+    const row = store.dishImages([key]).get(key);
+    if (row?.status !== "done") continue;
+    const cacheKey = `${key}:${row.updated_at}`;
+    if (!thumbCache.has(cacheKey)) {
+      const file = dishImagePath(dir, key);
+      if (!existsSync(file)) continue;
+      let jpeg;
+      try {
+        jpeg = await sharp(file)
+          .resize(176, 176, { fit: "cover" })
+          .jpeg({ quality: 80 })
+          .toBuffer();
+      } catch {
+        continue; // An unreadable picture just isn't shown.
+      }
+      thumbCache.set(
+        cacheKey,
+        `data:image/jpeg;base64,${jpeg.toString("base64")}`,
+      );
+    }
+    out.set(text, thumbCache.get(cacheKey));
+  }
+  return out;
+}
+
 // A finished dish picture's URL; ?v changes when it is regenerated, so the
 // long browser cache never shows a stale picture.
 export function dishImageUrl(store, dinner) {
@@ -228,9 +262,22 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     const week = store.getWeek(date);
     if (!week || week.status === "image_only")
       return page(res, 404, renderNotFound({ analytics }));
-    const png = await renderWeekPng(
-      buildWeekView(week, date, zurichToday(now())),
-    );
+    const view = buildWeekView(week, date, zurichToday(now()));
+    const thumbs = config.dishImages?.url
+      ? await dishThumbnails(
+          store,
+          imagesDir,
+          view.days.flatMap((d) => [
+            d.dinner,
+            d.lunch,
+            d.morning_snack,
+            d.afternoon_snack,
+          ]),
+        )
+      : new Map();
+    const png = await renderWeekPng(view, {
+      dishPicture: (text) => thumbs.get(text) ?? null,
+    });
     res.set("Cache-Control", "no-store").type("png").send(png);
   });
 
