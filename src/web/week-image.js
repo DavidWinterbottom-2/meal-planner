@@ -47,18 +47,23 @@ const ICONS = {
   cup: icon(
     '<path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/>',
   ),
+  notes: icon(
+    '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>',
+  ),
   cutlery: icon(
     '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
   ),
 };
 
 const GAP = 6;
+// 1072px inside the card, less 5 gaps.
 export const COLUMNS = [
-  { key: "day", title: "Day", width: 170 },
-  { key: "morning_snack", title: "Morning tea", width: 168, icon: "apple" },
-  { key: "lunch", title: "Lunch", width: 196, icon: "sandwich" },
-  { key: "afternoon_snack", title: "Afternoon tea", width: 168, icon: "cup" },
-  { key: "dinner", title: "Dinner", width: 346, icon: "cutlery" },
+  { key: "day", title: "Day", width: 160 },
+  { key: "morning_snack", title: "Morning tea", width: 146, icon: "apple" },
+  { key: "lunch", title: "Lunch", width: 170, icon: "sandwich" },
+  { key: "afternoon_snack", title: "Afternoon tea", width: 146, icon: "cup" },
+  { key: "dinner", title: "Dinner", width: 276, icon: "cutlery" },
+  { key: "note", title: "Notes", width: 144, icon: "notes" },
 ];
 
 const el = (type, style, children) => ({ type, props: { style, children } });
@@ -139,9 +144,9 @@ function dayCell(column, day) {
         "div",
         {
           display: "flex",
-          fontSize: 19,
+          fontSize: 18,
           fontWeight: 700,
-          letterSpacing: 1,
+          letterSpacing: 0.8,
           textTransform: "uppercase",
           color: C.title,
         },
@@ -152,45 +157,41 @@ function dayCell(column, day) {
         { display: "flex", fontSize: 16, color: C.ink2, marginTop: 2 },
         day.label.split(" ").slice(1).join(" "),
       ),
-      ...(day.note
-        ? [
-            el(
-              "div",
-              {
-                display: "flex",
-                fontSize: 15,
-                color: C.ink2,
-                marginTop: 6,
-                fontStyle: "italic",
-                lineHeight: 1.3,
-              },
-              day.note,
-            ),
-          ]
-        : []),
     ],
   );
 }
 
-function plainCell(column, text) {
+function plainCell(column, text, picture, { small = false } = {}) {
   return el(
     "div",
     {
       display: "flex",
+      flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       width: column.width,
       flexShrink: 0,
-      padding: "14px 12px",
+      padding: "12px 10px",
       borderRadius: 12,
       backgroundColor: C.cell,
       border: `1px solid ${C.line}`,
-      fontSize: 20,
-      lineHeight: 1.35,
+      fontSize: small ? 17 : 19,
+      lineHeight: 1.3,
       textAlign: "center",
-      color: text ? C.ink : C.dash,
+      color: text ? (small ? C.ink2 : C.ink) : C.dash,
     },
-    text || "–",
+    [
+      el("div", { display: "flex" }, text || "–"),
+      ...(picture
+        ? [
+            img(picture, 72, {
+              marginTop: 8,
+              borderRadius: 36,
+              objectFit: "cover",
+            }),
+          ]
+        : []),
+    ],
   );
 }
 
@@ -222,10 +223,10 @@ function dinnerCell(column, day, picture) {
       ),
       ...(picture
         ? [
-            img(picture, 96, {
+            img(picture, 88, {
               flexShrink: 0,
               marginLeft: 10,
-              borderRadius: 48,
+              borderRadius: 44,
               objectFit: "cover",
             }),
           ]
@@ -235,8 +236,8 @@ function dinnerCell(column, day, picture) {
 }
 
 // The element tree for a planned week's view model (buildWeekView).
-// `dishPicture(day)` returns a data URI for that day's dinner picture, or
-// null.
+// `dishPicture(text)` returns a data URI for a meal's food picture (dinner,
+// lunch or snack), or null.
 export function buildImageTree(view, { dishPicture = () => null } = {}) {
   const row = (cells) =>
     el("div", { display: "flex", gap: GAP, marginTop: GAP }, cells);
@@ -246,8 +247,10 @@ export function buildImageTree(view, { dishPicture = () => null } = {}) {
         c.key === "day"
           ? dayCell(c, day)
           : c.key === "dinner"
-            ? dinnerCell(c, day, dishPicture(day))
-            : plainCell(c, day[c.key]),
+            ? dinnerCell(c, day, dishPicture(day.dinner))
+            : c.key === "note"
+              ? plainCell(c, day.note, null, { small: true })
+              : plainCell(c, day[c.key], dishPicture(day[c.key])),
       ),
     ),
   );
@@ -331,7 +334,7 @@ export function buildImageTree(view, { dishPicture = () => null } = {}) {
                 color: C.title,
                 marginBottom: 8,
               },
-              "NOTES",
+              "WEEK NOTES",
             ),
             ...notes.map((line) =>
               el(

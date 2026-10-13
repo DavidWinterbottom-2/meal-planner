@@ -8,7 +8,7 @@ Turns a week's plan into a single PNG image that David can share to WhatsApp fro
 
 ### Requirement: Week PNG
 
-`GET /week/YYYY-MM-DD.png` SHALL return `image/png` for a planned week. The image shows a table with the columns Day, Lunch, Snacks, Dinner and Notes, one row per day, under the week heading, with the source label and the prep block. A week with no plan MUST return 404.
+`GET /week/YYYY-MM-DD.png` SHALL return `image/png` for a planned week. The image is laid out like Lisa's plans (David, 2026-10-13): a table with the columns Day, Morning tea, Lunch, Afternoon tea, Dinner and Notes (the day's note), one row per day, under the week heading and the source label, with the week's prep and notes as bullets underneath. One week per image. A week with no plan MUST return 404.
 
 #### Scenario: Planned week
 
@@ -31,12 +31,21 @@ The PNG SHALL be at least 1080px wide. It MUST wrap long cell text instead of tr
 
 ### Requirement: Kita and snacks in the image
 
-In the image, a lunch of "Kita" SHALL read "Thomas at Kita". The Snacks column MUST combine the morning and afternoon snacks.
+In the image, a lunch of "Kita" SHALL read "Thomas at Kita". The morning and afternoon snacks MUST each have their own column.
 
-#### Scenario: Snack column
+#### Scenario: Snack columns
 
 - **WHEN** a day has morning snack "Fruit" and afternoon snack "Crackers + cheese"
-- **THEN** that row's Snacks cell shows both
+- **THEN** that row's Morning tea cell shows "Fruit" and its Afternoon tea cell shows "Crackers + cheese"
+
+### Requirement: Food pictures in the image
+
+When dish pictures are on, every meal cell (morning tea, lunch, afternoon tea, dinner) whose text has a finished picture SHALL show it beside or under the text. Meals without one show text only.
+
+#### Scenario: Pictures off
+
+- **WHEN** the food-image service isn't configured
+- **THEN** the image has no food pictures and still renders
 
 ### Requirement: Always current
 

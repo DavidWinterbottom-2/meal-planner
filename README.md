@@ -27,20 +27,22 @@ with phone and desktop screenshots, from planning in Claude to the week view.
 - Light and dark mode follow the phone, with a toggle in the header (the
   shared winterbottom design system, vendored in `src/web/static/`).
 - **Dish pictures.** With `FOOD_IMAGE_URL` and `FOOD_IMAGE_API_KEY` set, each
-  distinct dinner gets one photo-realistic picture from the desktop's
+  distinct dinner, lunch and snack gets one photo-realistic picture from the desktop's
   `food-image` service (ComfyUI), shown beside it and saved for offline use.
   A background worker generates them a few minutes after a save; while the
   desktop is off it waits and retries. Dinners out, leftovers and Kita are
   skipped (`DISH_IMAGE_SKIP`). Ask Claude to `regenerate_dish_image` for a
   bad one. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
 - **Share a week as a picture.** A planned week has a **Share** button. It
-  opens the phone's share sheet with the week as a PNG (Day | Lunch | Snacks
-  | Dinner | Notes, the heading, whose plan and the prep), so it goes straight
+  opens the phone's share sheet with the week as a PNG laid out like Lisa's
+  plans (Day | Morning tea | Lunch | Afternoon tea | Dinner | Notes under a
+  serif week title, the week's prep and notes as bullets, and food pictures
+  in the cells once dish pictures are on), so it goes straight
   to WhatsApp: tap Share, pick WhatsApp, pick the chat, send. Where a browser
   can't share files, the PNG downloads as `meals-YYYY-MM-DD.png` instead. The
   picture is at `/week/YYYY-MM-DD.png`, behind the same login, drawn on the
-  server without a browser (satori, then resvg, with the bundled Inter font
-  in `assets/fonts/`) and fresh on every request. It needs a signal.
+  server without a browser (satori, then resvg, with the bundled Inter and
+  Lora fonts in `assets/fonts/` and Lucide icons) and fresh on every request. It needs a signal.
 - **Works offline.** A service worker (`src/web/static/sw.js`) saves each
   page you open, plus this week and history. With no signal (or none within
   4 s) the saved copy is shown under an "Offline" banner, with today re-marked

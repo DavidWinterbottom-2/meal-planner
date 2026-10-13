@@ -118,8 +118,13 @@ export function openStore(path = ":memory:") {
     weekCount: db.prepare("SELECT count(*) AS n FROM week"),
     historyCount: db.prepare("SELECT count(*) AS n FROM history"),
     weekStarts: db.prepare("SELECT week_start FROM week"),
-    dinners: db.prepare(
-      "SELECT DISTINCT dinner FROM day WHERE dinner IS NOT NULL AND dinner <> ''",
+    // Every distinct meal text that can get a picture: dinners, plus lunches
+    // and snacks for the share picture (laid out like Lisa's, 2026-10-13).
+    dishes: db.prepare(
+      `SELECT dinner AS text FROM day WHERE dinner IS NOT NULL AND dinner <> ''
+       UNION SELECT lunch FROM day WHERE lunch IS NOT NULL AND lunch <> ''
+       UNION SELECT morning_snack FROM day WHERE morning_snack IS NOT NULL AND morning_snack <> ''
+       UNION SELECT afternoon_snack FROM day WHERE afternoon_snack IS NOT NULL AND afternoon_snack <> ''`,
     ),
     insertDish: db.prepare(
       `INSERT OR IGNORE INTO dish_image (key, dish_text, status, updated_at)
@@ -349,13 +354,13 @@ export function openStore(path = ":memory:") {
 
     // --- dish pictures (OpenSpec add-dish-images) ---
 
-    // Give every distinct stored dinner a dish_image row: pending, or skipped
-    // when it isn't a cooked dish. Covers saves, day updates, undo and the
+    // Give every distinct stored meal (dinner, lunch, snack) a dish_image row:
+    // pending, or skipped when it isn't a cooked dish. Covers saves, day updates, undo and the
     // first-run backfill alike. Returns how many rows were added.
     syncDishImages(at, skip = DEFAULT_SKIP) {
       let added = 0;
       db.transaction(() => {
-        for (const { dinner } of q.dinners.all()) {
+        for (const { text: dinner } of q.dishes.all()) {
           added += q.insertDish.run({
             key: dishKey(dinner),
             dish_text: dinner,
