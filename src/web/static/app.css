@@ -14,6 +14,22 @@ body {
 .wb-appbar {
   padding-top: max(10px, env(safe-area-inset-top));
 }
+/* Brand, two icon buttons, sign-out and the theme toggle fit one line on
+   a 390px phone only with tighter gaps. */
+@media (max-width: 420px) {
+  .wb-appbar {
+    gap: 8px;
+  }
+  .wb-acct {
+    gap: 6px;
+  }
+}
+/* The page you're on, among the header's icon buttons. */
+.wb-iconbtn[aria-current] {
+  color: var(--accent);
+  background: var(--accent-tint);
+  border-color: var(--accent);
+}
 
 .mp-main {
   max-width: 640px;
@@ -196,13 +212,6 @@ h1 {
   font-size: 0.88rem;
   color: var(--ink-2);
   overflow-wrap: anywhere;
-}
-
-.mp-footer {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 0 16px max(24px, env(safe-area-inset-bottom));
-  text-align: center;
 }
 
 /* Shown by offline.js while the phone has no connection. */

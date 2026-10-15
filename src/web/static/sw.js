@@ -15,6 +15,7 @@ const PRECACHE = [
   "/static/app.css",
   "/static/winterbottom.css",
   "/static/winterbottom-theme.js",
+  "/static/winterbottom-icons.svg",
   "/static/swipe.js",
   "/static/share.js",
   "/static/offline.js",

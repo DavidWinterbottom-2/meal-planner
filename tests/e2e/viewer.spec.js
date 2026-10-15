@@ -27,6 +27,9 @@ test.describe("viewer listener", () => {
           () => document.documentElement.scrollWidth - window.innerWidth,
         );
         expect(overflow, path).toBeLessThanOrEqual(0);
+        // Brand, icon buttons, sign-out and theme toggle stay on one line.
+        const header = await page.locator(".wb-appbar").boundingBox();
+        expect(header.height, path).toBeLessThan(70);
       }
       await page.goto(WEEK);
       await page.screenshot({
