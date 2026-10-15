@@ -7,6 +7,11 @@ import { analyticsTag } from "./analytics.js";
 
 const PLAN_IN_CLAUDE = "https://claude.ai/new";
 
+// A header icon button, as in the other winterbottom apps' account cluster.
+function navIcon(href, label, icon, current) {
+  return markup`<a class="wb-iconbtn" href="${href}" aria-label="${label}" title="${label}"${raw(current ? ' aria-current="page"' : "")}><svg class="wb-icon" aria-hidden="true"><use href="/static/winterbottom-icons.svg#${icon}"/></svg></a>`;
+}
+
 function layout({
   title,
   analytics,
@@ -39,20 +44,17 @@ ${raw(analyticsTag(analytics))}
 </head>
 <body>
 <header class="wb-appbar">
-  <a class="wb-brand" href="/"><span class="wb-brand__mark">~</span>meals</a>
-  <nav class="wb-nav">
-    <a href="/"${raw(active === "week" ? ' aria-current="page"' : "")}>Week</a>
-    <a href="/history"${raw(active === "history" ? ' aria-current="page"' : "")}>History</a>
-    <a href="/upload"${raw(active === "upload" ? ' aria-current="page"' : "")}>Upload</a>
-  </nav>
+  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">~</span>Meal Planner</a>
   <div class="wb-acct">
-    <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Switch theme"><span data-wb-theme-icon>☀</span></button>
+    ${navIcon("/history", "History", "wb-history", active === "history")}
+    ${navIcon("/upload", "Upload Lisa's plan", "wb-upload", active === "upload")}
+    <a class="wb-signout" href="/oauth2/sign_out">Sign out</a>
+    <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Toggle theme"><span data-wb-theme-icon>☀</span></button>
   </div>
 </header>
 <main class="mp-main">
 ${body}
 </main>
-<footer class="mp-footer"><a class="wb-signout" href="/oauth2/sign_out">Sign out</a></footer>
 </body>
 </html>
 `.toString();

@@ -57,6 +57,31 @@ describe("renderWeek", () => {
     );
   });
 
+  test("header matches the other apps: brand, icon buttons, sign-out, theme; no footer", () => {
+    const out = renderWeek(buildWeekView(week, "2026-10-12", "2026-10-15"));
+    const header = out.slice(
+      out.indexOf('<header class="wb-appbar">'),
+      out.indexOf("</header>"),
+    );
+    expect(header).toMatch(
+      /class="wb-brand" href="\/" aria-current="page"><span class="wb-brand__mark">~<\/span>Meal Planner<\/a>/,
+    );
+    expect(header).not.toMatch(/wb-nav/);
+    const acct = header.slice(header.indexOf('class="wb-acct"'));
+    expect([...acct.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual([
+      "/history",
+      "/static/winterbottom-icons.svg#wb-history",
+      "/upload",
+      "/static/winterbottom-icons.svg#wb-upload",
+      "/oauth2/sign_out",
+    ]);
+    expect(acct).toMatch(/data-wb-theme-toggle/);
+    expect(out).not.toMatch(/<footer/);
+    expect(renderHistory([])).toMatch(
+      /href="\/history" aria-label="History" title="History" aria-current="page"/,
+    );
+  });
+
   test("shows the plan with user text escaped", () => {
     const out = renderWeek(buildWeekView(week, "2026-10-12", "2026-10-15"));
     expect(out).toMatch(/&lt;b&gt;Fish&lt;\/b&gt; &amp; chips/);
