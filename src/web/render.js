@@ -46,7 +46,6 @@ ${raw(analyticsTag(analytics))}
 <header class="wb-appbar">
   <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">~</span>Meal Planner</a>
   <div class="wb-acct">
-    ${navIcon("/history", "History", "wb-history", active === "history")}
     ${navIcon("/upload", "Upload Lisa's plan", "wb-upload", active === "upload")}
     <a class="wb-signout" href="/oauth2/sign_out">Sign out</a>
     <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Toggle theme"><span data-wb-theme-icon>☀</span></button>
