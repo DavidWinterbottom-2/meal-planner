@@ -2,45 +2,40 @@
 
 ## Why
 
-David wants to see what's in the freezer and the cellar from his phone, from a header button in the viewer. Today the stock lives in the Flatnotes note "Meals - Pantry", which opens with "_As of 6 Sep 2026, likely out of date._": nothing prompts anyone to update it, so it drifts. Lisa never edits it; only Claude does. Showing that note in the viewer would mean the app reading Flatnotes, which `planning-mcp` forbids (no Flatnotes calls, no Flatnotes credentials), and would only put a stale list on the phone.
+David wants to see what's in the freezer and the cellar from his phone, from a header button in the viewer, together with when the list was last updated. Today it lives in the Flatnotes note "Meals - Pantry", which only Claude edits. The viewer can't show that note directly, because the app must not call Flatnotes or hold Flatnotes credentials (`planning-mcp`).
 
-The useful change is to make the stock part of meal planning: the app holds it, Claude keeps it current through MCP while planning, and the viewer shows it with its age so a stale list is obvious.
+Simplest version that keeps that rule: the stock note moves into the app as one block of text. Claude writes it through MCP, and the viewer shows it with its last-updated date.
 
 ## What Changes
 
-- The app stores two stock lists, **Freezer** and **Cellar**, each with when it was last updated. Every save is kept (append-only), so an earlier list can be recovered.
-- New MCP tools: `get_stock` and `update_stock(section, items)`, which replaces one section's list.
-- `get_planning_context` returns the stock and its age. Its description tells Claude to:
-  - ask David what was used up or bought when a section is older than 14 days or empty, and update it before drafting;
-  - favour freezer items in the plan;
-  - after saving a plan that uses freezer items, offer to take them off the list.
-- The pantry stops being a Flatnotes rule note: `rule_notes` names three notes (household, meal bank, recipes). After deploy, Claude moves the note's lists in with `update_stock` and replaces the note body with a pointer to the app.
-- Viewer: a header icon button opens a read-only `/stock` page, Freezer then Cellar. Each list shows "updated N days ago", with a warning pill when older than 14 days. The page works offline like the week pages.
+- The app stores one **stock note**: free text, with the time it was last saved.
+- New MCP tools: `get_stock` and `update_stock(text)`, which replaces the note.
+- `get_planning_context` returns the stock note, so the pantry stops being a Flatnotes rule note (`rule_notes` names three: household, meal bank, recipes).
+- Viewer: a header icon button opens `/stock`, showing the note's text and "Last updated <date> (N days ago)". It works offline like the week pages.
+- After deploy, Claude copies the Flatnotes note into the app and replaces the note body with a pointer to the app.
 
 ## Non-goals
 
-- Editing stock in the viewer. The viewer stays read-only apart from uploads; Claude is the only writer.
-- Quantities, units, expiry dates or locations within the freezer. Items are short free text ("mince ×2", "salmon fillets").
-- Other sections (fridge, spice drawer).
-- Working out stock automatically from the plan (each saved dinner ticking items off). Claude offers it; David confirms.
-- Undo of stock changes through `undo_last_change`, which stays about weeks. Earlier lists are kept in the database but not exposed as a tool.
+- Separate freezer and cellar lists, item validation, quantities or expiry. The note is free text, written the way the Flatnotes note is today.
+- Staleness warnings, or instructions telling Claude to refresh old stock. The date is shown; that's all.
+- History of earlier versions. A save replaces the note.
+- Editing in the viewer. Claude is the only writer.
 - The app reading Flatnotes. Still forbidden.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `kitchen-stock`: storing the freezer and cellar lists, the MCP tools that read and replace them, and the viewer's stock page.
+- `kitchen-stock`: storing the stock note, the MCP tools that read and replace it, and the viewer's stock page.
 
 ### Modified Capabilities
 
-- `planning-mcp`: the planning context includes the stock, and the rule notes drop from four to three.
+- `planning-mcp`: the planning context includes the stock note, and the rule notes drop from four to three.
 
 ## Impact
 
-- A new store migration (a `stock` table). No new dependencies.
-- The MCP tool list grows by two. Claude's connector picks them up on its next session.
+- A new store migration (a one-row `stock` table). No new dependencies.
+- Two new MCP tools. Claude's connector picks them up after a reconnect.
 - The viewer gets a header button and a page; the service worker caches the page.
 - The design-system icon sprite gains a stock icon, a small docker-infra PR vendored back here.
-- `MEALS_RULE_NOTE_PANTRY` is no longer read. Harmless if it is still set in the Pi's `.env`.
-- One-off manual step after deploy: move the note's lists into the app, then point the note at the app.
+- `MEALS_RULE_NOTE_PANTRY` is no longer read. Harmless if it is still set.

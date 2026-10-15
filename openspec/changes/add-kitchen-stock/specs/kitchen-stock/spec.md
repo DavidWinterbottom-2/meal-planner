@@ -2,66 +2,57 @@
 
 ## Purpose
 
-Keeps the household's freezer and cellar stock in the app, current through Claude, and visible on David's phone.
+Keeps the household's stock note (what's in the freezer and the cellar) in the app, written by Claude and visible on David's phone with when it was last updated.
 
 ## ADDED Requirements
 
-### Requirement: Stock sections
+### Requirement: Stock note
 
-The app SHALL keep exactly two stock lists, `freezer` and `cellar`. Each list is an ordered list of items, each a non-empty line of at most 80 characters, at most 100 items per list, and carries the time it was last replaced. A list that has never been saved MUST read as empty with no update time.
+The app SHALL keep one stock note: free text of at most 4000 characters, and the time it was last saved. Before the first save, the note MUST read as empty with no update time.
 
 #### Scenario: Never saved
 
 - **WHEN** the stock is read before any save
-- **THEN** both lists are empty and neither has an update time
+- **THEN** the text is empty and the update time is null
 
-### Requirement: Replace a section
+### Requirement: Replace the stock note
 
-`update_stock(section, items)` SHALL replace one section's whole list and set its update time to now, leaving the other section unchanged. Items MUST be trimmed, blank items dropped, and exact duplicates (ignoring case) removed, keeping the first. An unknown section, an item over 80 characters or more than 100 items MUST be rejected as a tool error, changing nothing. An empty list is allowed and means the section is empty.
+`update_stock(text)` SHALL replace the whole note and set its update time to now. Text over 4000 characters MUST be rejected as a tool error, changing nothing.
 
-#### Scenario: Replace the freezer
+#### Scenario: Replace
 
-- **WHEN** `update_stock("freezer", ["Salmon", " mince ", "salmon", ""])` is called
-- **THEN** the freezer list is `["Salmon", "mince"]` with the update time of the call, and the cellar list is unchanged
+- **WHEN** `update_stock("Freezer: salmon, mince\nCellar: fusilli, rice")` is called
+- **THEN** `get_stock` returns that text with the time of the call
 
-#### Scenario: Invalid section
+#### Scenario: Too long
 
-- **WHEN** `update_stock("fridge", ["milk"])` is called
-- **THEN** the call fails with a tool error naming the allowed sections, and nothing is stored
+- **WHEN** `update_stock` is called with 4001 characters
+- **THEN** the call fails with a tool error, and the stored note is unchanged
 
-### Requirement: Stock history kept
+### Requirement: Read the stock note
 
-Every successful `update_stock` SHALL be kept, so the earlier lists remain in the database. Only the latest list of each section is returned by the tools and shown in the viewer.
-
-#### Scenario: Earlier list kept
-
-- **WHEN** the freezer is replaced twice
-- **THEN** the database still holds the first list, and `get_stock` returns the second
-
-### Requirement: Read the stock
-
-`get_stock` SHALL return both sections, each with its items, its update time (or null), and its age in whole days in the household timezone (or null).
+`get_stock` SHALL return the note's text, its update time (or null), and its age in whole days in the household timezone (or null).
 
 #### Scenario: Age in days
 
-- **WHEN** the freezer was last replaced on 2026-10-01 and `get_stock` is called on 2026-10-15
-- **THEN** the freezer's age is 14 days
+- **WHEN** the note was last saved on 2026-10-01 and `get_stock` is called on 2026-10-15
+- **THEN** the age is 14 days
 
 ### Requirement: Stock page
 
-The viewer SHALL show the stock read-only at `/stock`, behind the same login as the other viewer pages: Freezer first, then Cellar, each with its items and "updated N days ago" ("updated today", or "never updated"). A section older than 14 days or never updated MUST show a warning pill. The header SHALL have an icon button that opens `/stock` and is marked as the current page there.
+The viewer SHALL show the stock note read-only at `/stock`, behind the same login as the other viewer pages, keeping the note's line breaks, with "Last updated <weekday day month> (N days ago)" ("today" or "yesterday" for the most recent days). A note never saved MUST show "Nothing saved yet". The header SHALL have an icon button that opens `/stock` and is marked as the current page there.
 
-#### Scenario: Stale section
+#### Scenario: Last updated shown
 
-- **WHEN** `/stock` is opened and the cellar was last replaced 20 days ago
-- **THEN** the cellar shows "updated 20 days ago" with a warning pill, and the freezer, replaced yesterday, shows no pill
+- **WHEN** `/stock` is opened on 2026-10-15 and the note was saved on 2026-10-12
+- **THEN** the page shows the note's text and "Last updated Mon 12 Oct (3 days ago)"
 
 #### Scenario: Header button
 
 - **WHEN** any viewer page is opened
 - **THEN** the header has a stock icon button linking to `/stock`
 
-### Requirement: Stock offline
+### Requirement: Stock page offline
 
 The stock page SHALL be available offline like the week pages: fetched fresh when online, otherwise the copy last saved on the phone.
 

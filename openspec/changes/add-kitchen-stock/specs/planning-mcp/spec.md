@@ -4,17 +4,17 @@
 
 ### Requirement: Planning context tool
 
-`get_planning_context(weeks_back=6)` SHALL return one bundle with four parts: the titles of the 3 Flatnotes rule notes (`rule_notes`); the last `weeks_back` weeks with full data, with any `image_only` weeks flagged; the next unplanned Monday; and the kitchen stock (both sections with items, update time and age in days). Its description MUST tell Claude to call it first whenever planning meals; to ask David what was used up or bought when a stock section is older than 14 days or never updated, and call `update_stock` before drafting; to favour freezer items when planning; and, after saving a plan that uses freezer items, to offer to remove them from the freezer list.
+`get_planning_context(weeks_back=6)` SHALL return one bundle with four parts: the titles of the 3 Flatnotes rule notes (`rule_notes`); the last `weeks_back` weeks with full data, with any `image_only` weeks flagged; the next unplanned Monday; and the stock note (text, update time and age in days). Its description MUST tell Claude to call it first whenever planning meals, and that the stock note (what's in the freezer and the cellar) comes from the app and is updated with `update_stock`.
 
 #### Scenario: Bundle contents
 
 - **WHEN** `get_planning_context` is called with default arguments
-- **THEN** the result contains the 3 rule-note titles, up to 6 prior weeks, the next unplanned Monday and the stock with each section's age
+- **THEN** the result contains the 3 rule-note titles, up to 6 prior weeks, the next unplanned Monday and the stock note
 
 #### Scenario: Description instructs Claude
 
 - **WHEN** a client lists the tools
-- **THEN** `get_planning_context`'s description says to call it first whenever planning meals, to refresh stock older than 14 days by asking David, to favour freezer items, and to offer to update the freezer list after saving
+- **THEN** `get_planning_context`'s description says to call it first whenever planning meals, and that the stock note is updated with `update_stock`
 
 ### Requirement: Claude reads the rules from Flatnotes
 
