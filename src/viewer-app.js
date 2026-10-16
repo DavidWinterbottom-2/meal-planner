@@ -69,7 +69,14 @@ export const MANIFEST = {
   theme_color: "#f3f5f8",
   icons: [
     { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-    { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    // Full-bleed with the drawing inside the safe zone, so Android can
+    // crop it to its own icon shape (assets/icon/meals-icon.svg).
+    {
+      src: "/icons/icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any maskable",
+    },
     {
       src: "/icons/apple-touch-icon.png",
       sizes: "180x180",
