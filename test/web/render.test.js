@@ -70,7 +70,9 @@ describe("renderWeek", () => {
     const acct = header.slice(header.indexOf('class="wb-acct"'));
     expect([...acct.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual([
       "/upload",
-      "/static/winterbottom-icons.svg#wb-upload",
+      expect.stringMatching(
+        /^\/static\/winterbottom-icons\.svg\?v=[\d.]+#wb-upload$/,
+      ),
       "/oauth2/sign_out",
     ]);
     expect(acct).toMatch(/data-wb-theme-toggle/);

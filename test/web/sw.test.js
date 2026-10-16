@@ -103,6 +103,31 @@ describe("service worker", () => {
     expect(serviceWorkerScript("1.2.3")).not.toContain("__VERSION__");
   });
 
+  test("precaches each static file a page loads, at this release's URL", async () => {
+    const { APP_VERSION } = await import("../../src/version.js");
+    const { renderWeek } = await import("../../src/web/render.js");
+    const { buildWeekView } = await import("../../src/web/view.js");
+    const page = renderWeek(
+      buildWeekView(
+        { week_start: "2026-10-12", source: "David", status: "data", days: [] },
+        "2026-10-12",
+        "2026-10-15",
+      ),
+    );
+    const urls = [...page.matchAll(/"(\/static\/[^"#]+)/g)].map((m) => m[1]);
+    expect(urls.length).toBeGreaterThan(3);
+    const w = makeWorker();
+    await w.lifecycle("install");
+    for (const url of urls) {
+      // The page and the worker name the same release (9.9.9 in this test).
+      expect(url).toMatch(
+        new RegExp(`\\?v=${APP_VERSION.replaceAll(".", "\\.")}$`),
+      );
+      const sameFile = url.replace(`v=${APP_VERSION}`, "v=9.9.9");
+      expect(await w.caches.match(sameFile), sameFile).toBeTruthy();
+    }
+  });
+
   test("install precaches the shell and warms the pages; activate drops old caches", async () => {
     const w = makeWorker({
       network: { "/": res("home"), "/history": res("history") },

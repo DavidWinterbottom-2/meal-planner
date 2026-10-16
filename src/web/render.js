@@ -3,13 +3,14 @@
 // not `html`, so Prettier leaves these templates exactly as written.)
 
 import { markup, raw } from "./html.js";
+import { asset } from "../version.js";
 import { analyticsTag } from "./analytics.js";
 
 const PLAN_IN_CLAUDE = "https://claude.ai/new";
 
 // A header icon button, as in the other winterbottom apps' account cluster.
 function navIcon(href, label, icon, current) {
-  return markup`<a class="wb-iconbtn" href="${href}" aria-label="${label}" title="${label}"${raw(current ? ' aria-current="page"' : "")}><svg class="wb-icon" aria-hidden="true"><use href="/static/winterbottom-icons.svg#${icon}"/></svg></a>`;
+  return markup`<a class="wb-iconbtn" href="${href}" aria-label="${label}" title="${label}"${raw(current ? ' aria-current="page"' : "")}><svg class="wb-icon" aria-hidden="true"><use href="${asset("/static/winterbottom-icons.svg")}#${icon}"/></svg></a>`;
 }
 
 function layout({
@@ -34,12 +35,12 @@ function layout({
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" href="/icons/icon-192.png" type="image/png">
-<script src="/static/winterbottom-theme.js"></script>
-<link rel="stylesheet" href="/static/winterbottom.css">
-<link rel="stylesheet" href="/static/app.css">
-<script type="module" src="/static/offline.js"></script>
-${swipe ? raw('<script type="module" src="/static/swipe.js"></script>') : ""}
-${share ? raw('<script type="module" src="/static/share.js"></script>') : ""}
+<script src="${asset("/static/winterbottom-theme.js")}"></script>
+<link rel="stylesheet" href="${asset("/static/winterbottom.css")}">
+<link rel="stylesheet" href="${asset("/static/app.css")}">
+<script type="module" src="${asset("/static/offline.js")}"></script>
+${swipe ? markup`<script type="module" src="${asset("/static/swipe.js")}"></script>` : ""}
+${share ? markup`<script type="module" src="${asset("/static/share.js")}"></script>` : ""}
 ${raw(analyticsTag(analytics))}
 </head>
 <body>
