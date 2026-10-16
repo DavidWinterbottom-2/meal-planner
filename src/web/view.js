@@ -47,6 +47,20 @@ function snacks(day) {
 export const planImageUrl = (week) =>
   week?.image_id ? `/plan-images/${week.image_id}.jpg` : null;
 
+// A day's ingredients as a list: one per line, trimmed, without a leading
+// bullet ("-", "*" or "•"), blank lines dropped.
+export function ingredientLines(text) {
+  return (text ?? "")
+    .split("\n")
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^[-*•]\s*/, "")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
 // The model for one week page. `week` is the store's week (all 7 days) or
 // null when nothing is planned; `weekStart` is the Monday being viewed.
 // `imageFor(dinner)` returns the dinner's picture URL, or null (no picture
@@ -91,6 +105,7 @@ export function buildWeekView(week, weekStart, today, imageFor = () => null) {
         morning_snack: d.morning_snack || null,
         afternoon_snack: d.afternoon_snack || null,
         note: d.note || null,
+        ingredients: d.dinner ? ingredientLines(d.ingredients) : [],
         empty: !(d.dinner || lunch || snack || d.note),
       };
     }),

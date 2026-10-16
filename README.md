@@ -36,6 +36,10 @@ with phone and desktop screenshots, from planning in Claude to the week view.
   picture stays until the new one, made with a new seed, is ready. Saved
   pictures show even when `FOOD_IMAGE_URL` is unset; it only controls making
   new ones. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
+- **Dinner ingredients.** When Claude saves a plan it fills in each cooked
+  dinner's ingredients from the recipes note (freezer items marked
+  "(freezer)"). The week page shows them in an **Ingredients** fold-out under
+  that day's dinner; ask Claude to add them to a week saved earlier.
 - **Share a week as a picture.** A planned week has a **Share** button. It
   opens the phone's share sheet with the week as a PNG laid out like Lisa's
   plans (Day | Morning tea | Lunch | Afternoon tea | Dinner | Notes under a

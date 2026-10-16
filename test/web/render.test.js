@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import { analyticsTag } from "../../src/web/analytics.js";
 import { escapeHtml, markup, raw } from "../../src/web/html.js";
 import { renderHistory, renderWeek } from "../../src/web/render.js";
-import { buildWeekView } from "../../src/web/view.js";
+import { buildWeekView, ingredientLines } from "../../src/web/view.js";
 
 describe("markup", () => {
   test("escapes interpolated values, but not nested fragments or raw()", () => {
@@ -166,4 +166,40 @@ test("a day with a picture shows it with the dinner as alt text", () => {
   expect(out).toMatch(
     /<a class="mp-day__imglink" href="\/dish\/[0-9a-f]{16}\?week=2026-10-12"/,
   );
+});
+
+describe("ingredients", () => {
+  test("one per line, bullets and blanks dropped", () => {
+    expect(
+      ingredientLines("- 600 g fish (freezer)\n\n• prawns\n * potatoes "),
+    ).toEqual(["600 g fish (freezer)", "prawns", "potatoes"]);
+    expect(ingredientLines(null)).toEqual([]);
+  });
+
+  test("a fold-out under a dinner that has them, escaped; none otherwise", () => {
+    const view = buildWeekView(
+      {
+        week_start: "2026-10-12",
+        source: "David",
+        status: "data",
+        days: [
+          {
+            date: "2026-10-12",
+            dinner: "Fish pie",
+            ingredients: "fish\n<b>prawns</b>",
+          },
+          { date: "2026-10-13", dinner: "Stew" },
+          { date: "2026-10-14", ingredients: "orphan, no dinner" },
+        ],
+      },
+      "2026-10-12",
+      "2026-10-15",
+    );
+    const out = renderWeek(view);
+    expect(out.match(/<details class="mp-day__ingredients">/g)).toHaveLength(1);
+    expect(out).toMatch(
+      /<summary>Ingredients<\/summary><ul><li>fish<\/li><li>&lt;b&gt;prawns&lt;\/b&gt;<\/li><\/ul>/,
+    );
+    expect(out).not.toMatch(/orphan/);
+  });
 });

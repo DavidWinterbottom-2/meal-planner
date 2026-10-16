@@ -88,6 +88,10 @@ ALTER TABLE week ADD COLUMN image_id TEXT REFERENCES image(id);
 ALTER TABLE dish_image ADD COLUMN redo INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE dish_image ADD COLUMN generation INTEGER NOT NULL DEFAULT 0;
 `,
+  // 5: what each day's dinner needs (OpenSpec add-dinner-ingredients).
+  `
+ALTER TABLE day ADD COLUMN ingredients TEXT;
+`,
 ];
 
 export class NotFoundError extends Error {}

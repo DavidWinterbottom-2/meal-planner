@@ -14,6 +14,8 @@ export const DAY_FIELDS = [
   "afternoon_snack",
   "dinner",
   "note",
+  // What that day's dinner needs, one per line (add-dinner-ingredients).
+  "ingredients",
 ];
 
 // Blank or missing text is stored as null so "empty" has one representation.
