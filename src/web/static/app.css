@@ -291,3 +291,21 @@ details.mp-original summary {
   border-radius: var(--r);
   padding: 10px 12px;
 }
+
+/* What the day's dinner needs (add-dinner-ingredients). */
+.mp-day__ingredients {
+  clear: both;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.mp-day__ingredients summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.86rem;
+}
+.mp-day__ingredients ul {
+  margin: 6px 0 0;
+  padding-left: 1.2em;
+  overflow-wrap: anywhere;
+}

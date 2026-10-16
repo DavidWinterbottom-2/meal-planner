@@ -63,7 +63,7 @@ describe("schema", () => {
       "redo",
       "generation",
     ]);
-    expect(store._db.pragma("user_version", { simple: true })).toBe(4);
+    expect(store._db.pragma("user_version", { simple: true })).toBe(5);
   });
 
   test("reopening an existing file keeps its data", () => {
@@ -112,6 +112,7 @@ describe("saveWeek", () => {
       afternoon_snack: null,
       dinner: null,
       note: null,
+      ingredients: null,
     });
   });
 
@@ -241,6 +242,34 @@ describe("deleteWeek", () => {
 
   test("errors for a missing week", () => {
     expect(() => store.deleteWeek("2026-10-12", T1)).toThrow(NotFoundError);
+  });
+});
+
+describe("ingredients", () => {
+  test("saved with the plan, changed by update_day, and restored by undo", () => {
+    const store = openStore();
+    store.saveWeek(
+      {
+        week_start: "2026-10-12",
+        days: [
+          {
+            date: "2026-10-12",
+            dinner: "Fish pie",
+            ingredients: "  600 g white fish (freezer)\nprawns\n",
+          },
+        ],
+      },
+      T1,
+    );
+    expect(store.getWeek("2026-10-12").days[0].ingredients).toBe(
+      "600 g white fish (freezer)\nprawns",
+    );
+    store.updateDay("2026-10-12", { ingredients: "potatoes" }, T2);
+    expect(store.getWeek("2026-10-12").days[0].ingredients).toBe("potatoes");
+    store.undoLastChange(T3);
+    expect(store.getWeek("2026-10-12").days[0].ingredients).toBe(
+      "600 g white fish (freezer)\nprawns",
+    );
   });
 });
 
@@ -543,6 +572,19 @@ describe("attachImage (Lisa's original)", () => {
     expect(
       normalizeSnapshot({ week_start: "2026-10-12", updated_at: T1 }).image_id,
     ).toBeNull();
+  });
+
+  test("a snapshot from before ingredients existed restores with none", async () => {
+    const { normalizeSnapshot } = await import("../src/store.js");
+    const snap = normalizeSnapshot({
+      week_start: "2026-10-12",
+      updated_at: T1,
+      days: [{ date: "2026-10-12", dinner: "Fish pie" }],
+    });
+    expect(snap.days[0]).toMatchObject({
+      dinner: "Fish pie",
+      ingredients: null,
+    });
   });
 
   test("only Mondays; imageIds lists every stored image", () => {

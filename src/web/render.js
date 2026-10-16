@@ -75,6 +75,7 @@ function dayRow(day) {
       ? markup`<div class="mp-day__dinner mp-day__dinner--none">—</div>`
       : markup`${day.image ? markup`<a class="mp-day__imglink" href="${day.imageHref}" aria-label="Picture of ${day.dinner}"><img class="mp-day__img" src="${day.image}" alt="${day.dinner}" width="72" height="72" loading="lazy"></a>` : ""}<div class="mp-day__dinner">${day.dinner || "—"}</div>
   ${details.length ? markup`<div class="mp-day__more">${details}</div>` : ""}
+  ${day.ingredients.length ? markup`<details class="mp-day__ingredients"><summary>Ingredients</summary><ul>${day.ingredients.map((i) => markup`<li>${i}</li>`)}</ul></details>` : ""}
   ${day.note ? markup`<div class="mp-day__note">${day.note}</div>` : ""}`
   }
 </li>`;

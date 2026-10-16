@@ -19,6 +19,7 @@ const MONDAY = z
 // Generous limits on free text: a toddler's lunch never needs 500 characters.
 const TEXT_MAX = 500;
 const LONG_TEXT_MAX = 5000;
+const INGREDIENTS_MAX = 1000;
 
 const dayFields = {
   morning_snack: z.string().max(TEXT_MAX).nullish().describe("Morning snack"),
@@ -44,6 +45,14 @@ const dayFields = {
     .max(TEXT_MAX)
     .nullish()
     .describe("Short note for the day, e.g. who is out, appointments"),
+  ingredients: z
+    .string()
+    .max(INGREDIENTS_MAX)
+    .nullish()
+    .describe(
+      "What that day's dinner needs, one ingredient per line, from the recipes note; " +
+        'mark anything to take out of the freezer with "(freezer)". Empty for dinners out, leftovers and Kita.',
+    ),
 };
 
 const PLANNING_CONTEXT_DESCRIPTION = [
@@ -55,7 +64,8 @@ const PLANNING_CONTEXT_DESCRIPTION = [
   "Next, read every note in rule_notes with the Flatnotes connector (get_note); do not draft a plan",
   "without the household rules. If a note can't be read, tell David which one before planning.",
   "Then check the Cozi calendar for the planning window, draft the plan in chat, iterate with David,",
-  "and only call save_week_plan once he agrees.",
+  "and only call save_week_plan once he agrees. When saving, fill in each cooked dinner's ingredients",
+  '(one per line, from the recipes note, freezer items marked "(freezer)").',
 ].join(" ");
 
 const ok = (summary, data) => ({
@@ -87,6 +97,12 @@ export function formatWeekText(week) {
       d.afternoon_snack && `afternoon: ${d.afternoon_snack}`,
       d.dinner && `dinner: ${d.dinner}`,
       d.note && `note: ${d.note}`,
+      d.ingredients &&
+        `ingredients: ${d.ingredients
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .join(", ")}`,
     ].filter(Boolean);
     return `- ${dayLabel(d.date)}: ${parts.length ? parts.join("; ") : "—"}`;
   });

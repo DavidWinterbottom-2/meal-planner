@@ -89,6 +89,7 @@ describe("tool list", () => {
     expect(desc).toMatch(
       /read every note in rule_notes with the Flatnotes connector/,
     );
+    expect(desc).toMatch(/fill in each cooked dinner's ingredients/);
   });
 });
 
@@ -151,6 +152,26 @@ describe("save_week_plan", () => {
       prep: "Make sauce",
     });
     expect(text).toMatch(/Saved\.\nWeek of Mon 19 Oct — Lisa's plan/);
+  });
+
+  test("saves each dinner's ingredients and shows them in the text", async () => {
+    const { data, text } = await call("save_week_plan", {
+      week_start: "2026-10-26",
+      days: [
+        {
+          date: "2026-10-26",
+          dinner: "Fish pie",
+          ingredients: "white fish (freezer)\nprawns",
+        },
+      ],
+    });
+    expect(data.days[0].ingredients).toBe("white fish (freezer)\nprawns");
+    expect(text).toMatch(/ingredients: white fish \(freezer\), prawns/);
+    const tooLong = await call("save_week_plan", {
+      week_start: "2026-10-26",
+      days: [{ date: "2026-10-26", ingredients: "x".repeat(1001) }],
+    });
+    expect(tooLong.isError).toBe(true);
   });
 
   test("returns a tool error naming the nearest Monday", async () => {
