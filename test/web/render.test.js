@@ -57,7 +57,7 @@ describe("renderWeek", () => {
     );
   });
 
-  test("header: brand, sign-out and theme; Upload sits by the week title", () => {
+  test("header: brand, pantry note, sign-out and theme; Upload sits by the week title", () => {
     const out = renderWeek(buildWeekView(week, "2026-10-12", "2026-10-15"));
     const header = out.slice(
       out.indexOf('<header class="wb-appbar">'),
@@ -69,8 +69,10 @@ describe("renderWeek", () => {
     expect(header).not.toMatch(/wb-nav|\/upload/);
     const acct = header.slice(header.indexOf('class="wb-acct"'));
     expect([...acct.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual([
+      "https://flatnotes.winterbottom.xyz/note/Meals%20-%20Pantry",
       "/oauth2/sign_out",
     ]);
+    expect(acct).toMatch(/aria-label="Freezer and pantry \(Flatnotes\)"/);
     expect(acct).toMatch(/data-wb-theme-toggle/);
     expect(out).not.toMatch(/<footer/);
     // Upload goes in the row under the week title, for that week.
