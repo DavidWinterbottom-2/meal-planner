@@ -8,11 +8,6 @@ import { analyticsTag } from "./analytics.js";
 
 const PLAN_IN_CLAUDE = "https://claude.ai/new";
 
-// A header icon button, as in the other winterbottom apps' account cluster.
-function navIcon(href, label, icon, current) {
-  return markup`<a class="wb-iconbtn" href="${href}" aria-label="${label}" title="${label}"${raw(current ? ' aria-current="page"' : "")}><svg class="wb-icon" aria-hidden="true"><use href="${asset("/static/winterbottom-icons.svg")}#${icon}"/></svg></a>`;
-}
-
 function layout({
   title,
   analytics,
@@ -45,9 +40,8 @@ ${raw(analyticsTag(analytics))}
 </head>
 <body>
 <header class="wb-appbar">
-  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">~</span><span class="mp-brand__long">Meal Planner</span><span class="mp-brand__short">Meals</span></a>
+  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">~</span><span class="mp-brand__name">Meal Planner</span></a>
   <div class="wb-acct">
-    ${navIcon("/upload", "Upload Lisa's plan", "wb-upload", active === "upload")}
     <a class="wb-signout" href="/oauth2/sign_out">Sign out</a>
     <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Toggle theme"><span data-wb-theme-icon>☀</span></button>
   </div>
@@ -89,7 +83,10 @@ export function renderWeek(view, { analytics } = {}) {
     <p class="mp-week__meta">
       <span class="wb-pill ${view.isCurrent ? "wb-pill--accent" : "wb-pill--neutral"}">${view.badge}</span>
       ${view.source ? markup`<span class="wb-label">${view.source}</span>` : ""}
-      ${view.planned && !view.imageOnly ? markup`<button class="wb-btn wb-btn--secondary wb-btn--sm mp-share" type="button" data-share-week="${view.weekStart}">Share</button>` : ""}
+      <span class="mp-week__actions">
+        ${view.planned && !view.imageOnly ? markup`<button class="wb-btn wb-btn--secondary wb-btn--sm mp-share" type="button" data-share-week="${view.weekStart}">Share</button>` : ""}
+        <a class="wb-iconbtn" href="/upload?week=${view.weekStart}" aria-label="Upload Lisa's plan for this week" title="Upload Lisa's plan"><svg class="wb-icon" aria-hidden="true"><use href="${asset("/static/winterbottom-icons.svg")}#wb-upload"/></svg></a>
+      </span>
     </p>
   </div>
   <nav class="mp-weeknav" aria-label="Weeks">

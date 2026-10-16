@@ -14,46 +14,23 @@ body {
 .wb-appbar {
   padding-top: max(10px, env(safe-area-inset-top));
 }
-/* Brand, two icon buttons, sign-out and the theme toggle fit one line on
-   a 390px phone only with tighter gaps. */
 /* The header stays on one line on any phone, whatever its width, font or
-   text-size setting: below 420px the brand shortens to "Meals", the buttons
-   keep their size, and if space still runs out the name is cut short with
-   an ellipsis instead of the row wrapping. */
-.mp-brand__short {
-  display: none;
+   text-size setting: the buttons keep their size, and if space runs out the
+   name is cut short with an ellipsis instead of the row wrapping. */
+.wb-appbar {
+  flex-wrap: nowrap;
 }
-.mp-brand__long,
-.mp-brand__short {
+.wb-brand {
+  min-width: 0;
+}
+.mp-brand__name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-@media (max-width: 420px) {
-  .wb-appbar {
-    gap: 8px;
-    flex-wrap: nowrap;
-  }
-  .wb-brand {
-    min-width: 0;
-  }
-  .wb-acct {
-    gap: 6px;
-    flex: none;
-  }
-  .mp-brand__long {
-    display: none;
-  }
-  .mp-brand__short {
-    display: inline;
-  }
-}
-/* The page you're on, among the header's icon buttons. */
-.wb-iconbtn[aria-current] {
-  color: var(--accent);
-  background: var(--accent-tint);
-  border-color: var(--accent);
+.wb-acct {
+  flex: none;
 }
 
 .mp-main {
@@ -81,8 +58,12 @@ h1 {
 }
 
 /* Share sits at the end of that line. */
-.mp-share {
+/* Share and Upload, together at the end of the row under the week title. */
+.mp-week__actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mp-weeknav {

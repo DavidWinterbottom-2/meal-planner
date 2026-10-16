@@ -57,26 +57,30 @@ describe("renderWeek", () => {
     );
   });
 
-  test("header matches the other apps: brand, upload, sign-out, theme; no history button or footer", () => {
+  test("header: brand, sign-out and theme; Upload sits by the week title", () => {
     const out = renderWeek(buildWeekView(week, "2026-10-12", "2026-10-15"));
     const header = out.slice(
       out.indexOf('<header class="wb-appbar">'),
       out.indexOf("</header>"),
     );
     expect(header).toMatch(
-      /class="wb-brand" href="\/" aria-current="page"><span class="wb-brand__mark">~<\/span><span class="mp-brand__long">Meal Planner<\/span><span class="mp-brand__short">Meals<\/span><\/a>/,
+      /class="wb-brand" href="\/" aria-current="page"><span class="wb-brand__mark">~<\/span><span class="mp-brand__name">Meal Planner<\/span><\/a>/,
     );
-    expect(header).not.toMatch(/wb-nav/);
+    expect(header).not.toMatch(/wb-nav|\/upload/);
     const acct = header.slice(header.indexOf('class="wb-acct"'));
     expect([...acct.matchAll(/href="([^"]+)"/g)].map((m) => m[1])).toEqual([
-      "/upload",
-      expect.stringMatching(
-        /^\/static\/winterbottom-icons\.svg\?v=[\d.]+#wb-upload$/,
-      ),
       "/oauth2/sign_out",
     ]);
     expect(acct).toMatch(/data-wb-theme-toggle/);
     expect(out).not.toMatch(/<footer/);
+    // Upload goes in the row under the week title, for that week.
+    const meta = out.slice(
+      out.indexOf('class="mp-week__meta"'),
+      out.indexOf("</p>", out.indexOf('class="mp-week__meta"')),
+    );
+    expect(meta).toMatch(
+      /<a class="wb-iconbtn" href="\/upload\?week=2026-10-12" aria-label="Upload Lisa's plan for this week"/,
+    );
   });
 
   test("shows the plan with user text escaped", () => {
