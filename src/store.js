@@ -81,6 +81,13 @@ CREATE TABLE image (
 );
 ALTER TABLE week ADD COLUMN image_id TEXT REFERENCES image(id);
 `,
+  // 4: redo a dish picture while keeping the old one (OpenSpec
+  // add-dish-picture-redo). redo = 1 marks a finished picture with a new one
+  // queued; generation counts redos, so each gets its own seed.
+  `
+ALTER TABLE dish_image ADD COLUMN redo INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE dish_image ADD COLUMN generation INTEGER NOT NULL DEFAULT 0;
+`,
 ];
 
 export class NotFoundError extends Error {}
@@ -132,11 +139,11 @@ export function openStore(path = ":memory:") {
     ),
     dish: db.prepare("SELECT * FROM dish_image WHERE key = ?"),
     nextPendingDish: db.prepare(
-      "SELECT * FROM dish_image WHERE status = 'pending' ORDER BY updated_at, key LIMIT 1",
+      "SELECT * FROM dish_image WHERE status = 'pending' OR redo = 1 ORDER BY updated_at, key LIMIT 1",
     ),
     updateDish: db.prepare(
       `UPDATE dish_image SET status = @status, attempts = @attempts, error = @error,
-       updated_at = @updated_at WHERE key = @key`,
+       redo = @redo, updated_at = @updated_at WHERE key = @key`,
     ),
     insertImage: db.prepare(
       `INSERT INTO image (id, filename, original_name, uploaded_at)
@@ -144,11 +151,17 @@ export function openStore(path = ":memory:") {
     ),
     image: db.prepare("SELECT * FROM image WHERE id = ?"),
     imageIds: db.prepare("SELECT id FROM image"),
-    upsertDish: db.prepare(
+    // A redo: a finished picture stays done (and shown) with redo = 1; any
+    // other row goes back to pending. Either way a new generation, so a
+    // new seed.
+    redoDish: db.prepare(
       `INSERT INTO dish_image (key, dish_text, status, attempts, error, updated_at)
-       VALUES (@key, @dish_text, @status, 0, NULL, @updated_at)
-       ON CONFLICT(key) DO UPDATE SET status = excluded.status, attempts = 0,
-       error = NULL, updated_at = excluded.updated_at`,
+       VALUES (@key, @dish_text, 'pending', 0, NULL, @updated_at)
+       ON CONFLICT(key) DO UPDATE SET
+         status = CASE WHEN status = 'done' THEN 'done' ELSE 'pending' END,
+         redo = CASE WHEN status = 'done' THEN 1 ELSE 0 END,
+         generation = generation + 1, attempts = 0, error = NULL,
+         updated_at = excluded.updated_at`,
     ),
   };
 
@@ -373,8 +386,15 @@ export function openStore(path = ":memory:") {
     },
     nextPendingDish: () => q.nextPendingDish.get() ?? null,
     getDish: (key) => q.dish.get(key) ?? null,
-    updateDish: (key, { status, attempts, error = null }, at) =>
-      q.updateDish.run({ key, status, attempts, error, updated_at: at }),
+    updateDish: (key, { status, attempts, error = null, redo = 0 }, at) =>
+      q.updateDish.run({
+        key,
+        status,
+        attempts,
+        error,
+        redo: redo ? 1 : 0,
+        updated_at: at,
+      }),
 
     // Status of each key that has a row: key -> { status, updated_at }.
     dishImages(keys) {
@@ -386,7 +406,8 @@ export function openStore(path = ":memory:") {
       return out;
     },
 
-    // Throw a dinner's picture away and queue a new one.
+    // Queue a new picture for a dinner. A finished picture stays shown until
+    // the new one is saved; asking again while one is queued does nothing.
     regenerateDish(dinner, at, skip = DEFAULT_SKIP) {
       const text = cleanText(dinner);
       if (!text) throw new Error("dinner is required");
@@ -395,12 +416,11 @@ export function openStore(path = ":memory:") {
           `"${text}" is on the skip list (eating out, leftovers, Kita…), so it never gets a picture`,
         );
       const key = dishKey(text);
-      q.upsertDish.run({
-        key,
-        dish_text: text,
-        status: "pending",
-        updated_at: at,
-      });
+      const row = q.dish.get(key);
+      const queued =
+        row &&
+        (row.redo === 1 || (row.status === "pending" && row.attempts === 0));
+      if (!queued) q.redoDish.run({ key, dish_text: text, updated_at: at });
       return q.dish.get(key);
     },
 

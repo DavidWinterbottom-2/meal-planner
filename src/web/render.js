@@ -73,7 +73,7 @@ function dayRow(day) {
   ${
     day.empty
       ? markup`<div class="mp-day__dinner mp-day__dinner--none">—</div>`
-      : markup`${day.image ? markup`<img class="mp-day__img" src="${day.image}" alt="${day.dinner}" width="72" height="72" loading="lazy">` : ""}<div class="mp-day__dinner">${day.dinner || "—"}</div>
+      : markup`${day.image ? markup`<a class="mp-day__imglink" href="${day.imageHref}" aria-label="Picture of ${day.dinner}"><img class="mp-day__img" src="${day.image}" alt="${day.dinner}" width="72" height="72" loading="lazy"></a>` : ""}<div class="mp-day__dinner">${day.dinner || "—"}</div>
   ${details.length ? markup`<div class="mp-day__more">${details}</div>` : ""}
   ${day.note ? markup`<div class="mp-day__note">${day.note}</div>` : ""}`
   }
@@ -169,6 +169,35 @@ export function renderUpload({ weeks, selected, error, analytics } = {}) {
   </form>
 </section>`;
   return layout({ title: "Meals · Upload", analytics, active: "upload", body });
+}
+
+// A dinner's picture large, with a button to ask for a new one
+// (add-dish-picture-redo). `queued` once a new picture is on its way.
+export function renderDish({
+  dish,
+  src,
+  back,
+  action,
+  queued,
+  canRedo = true,
+  analytics,
+} = {}) {
+  const body = markup`<section class="mp-dish">
+  <a class="mp-dish__back" href="${back}">← Back to the week</a>
+  <h1>${dish}</h1>
+  <img class="mp-dish__img" src="${src}" alt="${dish}">
+  ${
+    !canRedo
+      ? ""
+      : queued
+        ? markup`<p class="wb-pill wb-pill--accent mp-dish__queued" role="status">A new picture is on its way. It replaces this one once the desktop has made it.</p>`
+        : markup`<form method="post" action="${action}">
+    <button class="wb-btn wb-btn--primary" type="submit">New picture</button>
+  </form>
+  <p class="wb-muted">Don't like it? A new picture replaces this one in a few minutes, while the desktop is on.</p>`
+  }
+</section>`;
+  return layout({ title: `Meals · ${dish}`, analytics, body });
 }
 
 export function renderNotFound({ analytics } = {}) {

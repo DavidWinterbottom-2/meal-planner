@@ -31,8 +31,11 @@ with phone and desktop screenshots, from planning in Claude to the week view.
   `food-image` service (ComfyUI), shown beside it and saved for offline use.
   A background worker generates them a few minutes after a save; while the
   desktop is off it waits and retries. Dinners out, leftovers and Kita are
-  skipped (`DISH_IMAGE_SKIP`). Ask Claude to `regenerate_dish_image` for a
-  bad one. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
+  skipped (`DISH_IMAGE_SKIP`). Don't like one? Tap it for its dish page and
+  press **New picture** (or ask Claude to `regenerate_dish_image`): the old
+  picture stays until the new one, made with a new seed, is ready. Saved
+  pictures show even when `FOOD_IMAGE_URL` is unset; it only controls making
+  new ones. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
 - **Share a week as a picture.** A planned week has a **Share** button. It
   opens the phone's share sheet with the week as a PNG laid out like Lisa's
   plans (Day | Morning tea | Lunch | Afternoon tea | Dinner | Notes under a

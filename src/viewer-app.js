@@ -33,6 +33,7 @@ import { resolve } from "node:path";
 import { dishImagePath } from "./images/worker.js";
 import {
   renderHistory,
+  renderDish,
   renderNotFound,
   renderOffline,
   renderUpload,
@@ -218,6 +219,54 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     if (!file || !existsSync(file)) return next();
     res.set("Cache-Control", "private, max-age=2592000, immutable");
     res.sendFile(resolve(file));
+  });
+
+  // A dinner's picture large, with a New picture button (OpenSpec
+  // add-dish-picture-redo). Only finished pictures of known dishes have a
+  // page; `week` is used for the back link once it is a valid Monday.
+  const dishPage = (req) => {
+    const { key } = req.params;
+    if (!/^[0-9a-f]{16}$/.test(key) || !imagesDir) return null;
+    const row = store.getDish(key);
+    if (row?.status !== "done" || !existsSync(dishImagePath(imagesDir, key)))
+      return null;
+    const week = req.query.week;
+    const back =
+      typeof week === "string" && isIsoDate(week) && isMonday(week)
+        ? `/week/${week}`
+        : "/";
+    return { key, row, back, week: back === "/" ? null : week };
+  };
+  app.get("/dish/:key", (req, res) => {
+    const d = dishPage(req);
+    if (!d) return page(res, 404, renderNotFound({ analytics }));
+    const qs = d.week ? `?week=${d.week}` : "";
+    page(
+      res,
+      200,
+      renderDish({
+        dish: d.row.dish_text,
+        src: dishImageUrl(store, d.row.dish_text),
+        back: d.back,
+        action: `/dish/${d.key}/redo${qs}`,
+        queued: d.row.redo === 1,
+        canRedo: Boolean(config.dishImages?.url),
+        analytics,
+      }),
+    );
+  });
+  app.post("/dish/:key/redo", (req, res) => {
+    if (!isSameOrigin(req))
+      return res.status(403).type("text").send("Forbidden");
+    const d = dishPage(req);
+    if (!d || !config.dishImages?.url)
+      return page(res, 404, renderNotFound({ analytics }));
+    store.regenerateDish(
+      d.row.dish_text,
+      now().toISOString(),
+      config.dishImages.skip,
+    );
+    res.redirect(303, `/dish/${d.key}${d.week ? `?week=${d.week}` : ""}`);
   });
 
   // Lisa's original plan images, behind the login like the pages. The name

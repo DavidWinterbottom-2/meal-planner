@@ -332,9 +332,9 @@ export function createMcpServer({
       {
         title: "Redo a dish picture",
         description:
-          "Throw away the generated picture for a dinner and queue a new one (it appears in the viewer a few " +
-          "minutes later, while the desktop is on). Use when David says a picture looks wrong. Pass the dinner " +
-          "text exactly as it is in the plan.",
+          "Queue a new picture for a dinner, with a new seed so it differs. The old picture stays in the viewer " +
+          "until the new one is ready (a few minutes, while the desktop is on). Use when David says a picture " +
+          "looks wrong. Pass the dinner text exactly as it is in the plan.",
         inputSchema: {
           dinner: z
             .string()

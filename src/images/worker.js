@@ -54,7 +54,10 @@ export function createDishImageWorker({
         headers: { "content-type": "application/json", "x-api-key": apiKey },
         body: JSON.stringify({
           prompt: dish.dish_text,
-          seed: dishSeed(dish.key, dish.attempts),
+          seed: dishSeed(
+            dish.key,
+            dish.generation * MAX_ATTEMPTS + dish.attempts,
+          ),
           size,
         }),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -91,9 +94,17 @@ export function createDishImageWorker({
 
     const attempts = dish.attempts + 1;
     const failed = attempts >= MAX_ATTEMPTS;
+    // A failed redo keeps the old picture: the row stays done, and stops
+    // being queued once its attempts run out.
+    const redo = dish.redo === 1;
     store.updateDish(
       dish.key,
-      { status: failed ? "failed" : "pending", attempts, error: problem },
+      {
+        status: redo ? "done" : failed ? "failed" : "pending",
+        attempts,
+        error: problem,
+        redo: redo && !failed,
+      },
       stamp(),
     );
     log(

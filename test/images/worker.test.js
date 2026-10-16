@@ -115,6 +115,53 @@ describe("dish picture worker", () => {
     expect(existsSync(dishImagePath(dir, dishKey("Fish pie")))).toBe(false);
   });
 
+  test("a redo keeps the old picture until the new one is saved, with a new seed", async () => {
+    const key = dishKey("Fish pie");
+    const NEW = Buffer.concat([PNG, Buffer.from("new")]);
+    replies.push(respond(200, PNG));
+    await worker().runOnce();
+    store.regenerateDish("Fish pie", AT);
+    // Still done (and so still shown) while the redo waits.
+    expect(store.getDish(key)).toMatchObject({ status: "done", redo: 1 });
+    replies.push(respond(502, "boom"));
+    expect(await worker().runOnce()).toBe("retry");
+    expect(store.getDish(key)).toMatchObject({ status: "done", redo: 1 });
+    expect(readFileSync(dishImagePath(dir, key))).toEqual(PNG);
+    replies.push(respond(200, NEW));
+    expect(await worker().runOnce()).toBe("done");
+    expect(store.getDish(key)).toMatchObject({ status: "done", redo: 0 });
+    expect(readFileSync(dishImagePath(dir, key))).toEqual(NEW);
+    // First picture, the redo's failed try and its retry: three seeds.
+    expect(new Set(calls.map((c) => c.body.seed)).size).toBe(3);
+  });
+
+  test("a redo that keeps failing gives up and keeps the old picture", async () => {
+    const key = dishKey("Fish pie");
+    replies.push(respond(200, PNG));
+    await worker().runOnce();
+    store.regenerateDish("Fish pie", AT);
+    for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+      replies.push(respond(502, "boom"));
+      await worker().runOnce();
+    }
+    expect(store.getDish(key)).toMatchObject({
+      status: "done",
+      redo: 0,
+      error: "HTTP 502 boom",
+    });
+    expect(readFileSync(dishImagePath(dir, key))).toEqual(PNG);
+    expect(await worker().runOnce()).toBe("idle");
+  });
+
+  test("each redo uses a seed no earlier picture used", async () => {
+    for (let i = 0; i < 3; i++) {
+      replies.push(respond(200, PNG));
+      expect(await worker().runOnce()).toBe("done");
+      store.regenerateDish("Fish pie", AT);
+    }
+    expect(new Set(calls.map((c) => c.body.seed)).size).toBe(3);
+  });
+
   test("a new dinner from update_day is picked up", async () => {
     replies.push(respond(200, PNG), respond(200, PNG));
     const w = worker();
@@ -180,6 +227,13 @@ describe("store: dish pictures", () => {
       error: null,
     });
     expect(store.regenerateDish("Brand new stew", AT).status).toBe("pending");
+    // Asking again while a new picture is queued changes nothing.
+    store.updateDish(key, { status: "done", attempts: 0 }, AT);
+    const first = store.regenerateDish("Fish pie", AT);
+    expect(first).toMatchObject({ status: "done", redo: 1 });
+    expect(
+      store.regenerateDish("Fish pie", "2026-10-16T00:00:00.000Z"),
+    ).toEqual(first);
     expect(() => store.regenerateDish("Dinner at IKEA", AT)).toThrow(
       /skip list/,
     );
