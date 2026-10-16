@@ -365,7 +365,33 @@ describe("dish pictures", () => {
     expect((await fetch(`${picViewer}${path}`)).status).toBe(404);
   });
 
-  test("with pictures off, no picture is shown or served", async () => {
+  test("saved pictures still show with the food-image service unset", async () => {
+    const config = readConfig({ MCP_API_KEY: KEY, DISH_IMAGES_DIR: dir });
+    expect(config.dishImages.url).toBeFalsy();
+    const offViewer = await listen(
+      createViewerApp({ store: picStore, config, now: () => nowValue }),
+    );
+    const page = await (await fetch(`${offViewer}/week/2026-10-12`)).text();
+    const [, src] = /<img class="mp-day__img" src="([^"]+)"/.exec(page);
+    expect(
+      (await fetch(`${offViewer}${src.replace("&amp;", "&")}`)).status,
+    ).toBe(200);
+  });
+
+  test("a picture marked done but missing on disk isn't shown", async () => {
+    const { unlinkSync, writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const file = join(dir, `${fishKey}.png`);
+    unlinkSync(file);
+    try {
+      const page = await (await fetch(`${picViewer}/week/2026-10-12`)).text();
+      expect(page).not.toMatch(/mp-day__img/);
+    } finally {
+      writeFileSync(file, PNG);
+    }
+  });
+
+  test("with no saved pictures, none is shown or served", async () => {
     const page = await (await fetch(`${viewer}/week/2026-10-12`)).text();
     expect(page).not.toMatch(/mp-day__img/);
     expect((await fetch(`${viewer}/dish-images/${fishKey}.png`)).status).toBe(

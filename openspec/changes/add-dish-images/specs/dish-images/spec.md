@@ -62,9 +62,14 @@ Claude SHALL be able to discard a dinner's picture and queue a new one through a
 
 ### Requirement: Off without the food-image service
 
-With no food-image service address configured, nothing SHALL be queued or generated, and the viewer SHALL work as before.
+With no food-image service address configured, nothing SHALL be queued or generated, and the viewer SHALL work as before. Pictures already saved SHALL still be shown: the address only decides whether new pictures are made.
 
 #### Scenario: Local development
 
-- **WHEN** the app runs without `FOOD_IMAGE_URL`
+- **WHEN** the app runs without `FOOD_IMAGE_URL` and no pictures are saved
 - **THEN** pages render with no pictures and no errors
+
+#### Scenario: Restart without the service
+
+- **WHEN** the app restarts without `FOOD_IMAGE_URL` while pictures are saved
+- **THEN** the saved pictures are still shown, and no new ones are made
