@@ -8,6 +8,10 @@ import { analyticsTag } from "./analytics.js";
 
 const PLAN_IN_CLAUDE = "https://claude.ai/new";
 
+// The app's mark in the header tile: the home-screen icon's plate, fork and
+// knife (assets/icon/meals-icon.svg) in the tile's ink colour.
+const BRAND_MARK = `<svg class="mp-brand__icon" viewBox="64 136 384 240" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="256" cy="256" r="112" stroke-width="22"/><path d="M86 156v52M104 156v52M122 156v52M86 208q0 30 18 30q18 0 18-30" stroke-width="16"/><path d="M104 238v120M408 358V250" stroke-width="22"/></g><path d="M400 154c26 18 34 58 26 100h-26z" fill="currentColor"/></svg>`;
+
 function layout({
   title,
   analytics,
@@ -40,7 +44,7 @@ ${raw(analyticsTag(analytics))}
 </head>
 <body>
 <header class="wb-appbar">
-  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">~</span><span class="mp-brand__name">Meal Planner</span></a>
+  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">${raw(BRAND_MARK)}</span><span class="mp-brand__name">Meal Planner</span></a>
   <div class="wb-acct">
     <a class="wb-signout" href="/oauth2/sign_out">Sign out</a>
     <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Toggle theme"><span data-wb-theme-icon>☀</span></button>

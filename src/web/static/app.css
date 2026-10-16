@@ -23,6 +23,10 @@ body {
 .wb-brand {
   min-width: 0;
 }
+.mp-brand__icon {
+  width: 20px;
+  height: 20px;
+}
 .mp-brand__name {
   min-width: 0;
   overflow: hidden;
