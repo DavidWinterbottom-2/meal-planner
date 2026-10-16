@@ -10,15 +10,19 @@ const CACHE = `meals-${VERSION}`;
 const NETWORK_TIMEOUT_MS = 4000;
 
 // Saved at install: the offline fallback page and what every page loads.
+// Static files carry the release in their URL (as the pages ask for them),
+// so this cache can never be filled with a previous release's copy.
 const PRECACHE = [
   "/offline",
-  "/static/app.css",
-  "/static/winterbottom.css",
-  "/static/winterbottom-theme.js",
-  "/static/winterbottom-icons.svg",
-  "/static/swipe.js",
-  "/static/share.js",
-  "/static/offline.js",
+  ...[
+    "/static/app.css",
+    "/static/winterbottom.css",
+    "/static/winterbottom-theme.js",
+    "/static/winterbottom-icons.svg",
+    "/static/swipe.js",
+    "/static/share.js",
+    "/static/offline.js",
+  ].map((path) => `${path}?v=${VERSION}`),
   "/icons/icon-192.png",
 ];
 // Also saved at install, best effort, so they work offline before a visit.

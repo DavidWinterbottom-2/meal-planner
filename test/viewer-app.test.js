@@ -217,7 +217,7 @@ describe("week picture", { timeout: RENDER_TIMEOUT }, () => {
   test("a planned week's page has the Share button; an unplanned one doesn't", async () => {
     const planned = await (await get(`${viewer}/week/2026-10-12`)).text();
     expect(planned).toMatch(/data-share-week="2026-10-12"/);
-    expect(planned).toMatch(/src="\/static\/share\.js"/);
+    expect(planned).toMatch(/src="\/static\/share\.js\?v=[\d.]+"/);
     const empty = await (await get(`${viewer}/week/2026-11-02`)).text();
     expect(empty).not.toMatch(/data-share-week|share\.js/);
   });
@@ -284,7 +284,9 @@ describe("offline support", () => {
 
   test("every page loads the offline script; day rows carry their date", async () => {
     const body = await (await fetch(`${viewer}/week/2026-10-12`)).text();
-    expect(body).toMatch(/<script type="module" src="\/static\/offline.js">/);
+    expect(body).toMatch(
+      /<script type="module" src="\/static\/offline.js\?v=[\d.]+">/,
+    );
     expect(body).toMatch(/data-date="2026-10-12"/);
     expect(await (await fetch(`${viewer}/history`)).text()).toMatch(
       /static\/offline.js/,
