@@ -16,12 +16,37 @@ body {
 }
 /* Brand, two icon buttons, sign-out and the theme toggle fit one line on
    a 390px phone only with tighter gaps. */
+/* The header stays on one line on any phone, whatever its width, font or
+   text-size setting: below 420px the brand shortens to "Meals", the buttons
+   keep their size, and if space still runs out the name is cut short with
+   an ellipsis instead of the row wrapping. */
+.mp-brand__short {
+  display: none;
+}
+.mp-brand__long,
+.mp-brand__short {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 @media (max-width: 420px) {
   .wb-appbar {
     gap: 8px;
+    flex-wrap: nowrap;
+  }
+  .wb-brand {
+    min-width: 0;
   }
   .wb-acct {
     gap: 6px;
+    flex: none;
+  }
+  .mp-brand__long {
+    display: none;
+  }
+  .mp-brand__short {
+    display: inline;
   }
 }
 /* The page you're on, among the header's icon buttons. */

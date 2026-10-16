@@ -39,6 +39,28 @@ test.describe("viewer listener", () => {
     });
   }
 
+  test("the header stays on one line on narrow phones, even with large text", async ({
+    page,
+  }) => {
+    for (const width of [320, 360, 390, 412]) {
+      for (const textScale of ["100%", "130%"]) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto("/");
+        // Android's text-size setting scales rem-based text like this.
+        await page.evaluate((scale) => {
+          document.documentElement.style.fontSize = scale;
+        }, textScale);
+        const header = await page.locator(".wb-appbar").boundingBox();
+        const label = `${width}px, text ${textScale}`;
+        expect(header.height, label).toBeLessThan(70);
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        );
+        expect(overflow, label).toBeLessThanOrEqual(0);
+      }
+    }
+  });
+
   test("only today shows the Today pill", async ({ page }) => {
     // "/" always contains today; every other row's pill must stay hidden.
     await page.goto("/");

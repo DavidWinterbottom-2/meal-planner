@@ -45,7 +45,7 @@ ${raw(analyticsTag(analytics))}
 </head>
 <body>
 <header class="wb-appbar">
-  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">~</span>Meal Planner</a>
+  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">~</span><span class="mp-brand__long">Meal Planner</span><span class="mp-brand__short">Meals</span></a>
   <div class="wb-acct">
     ${navIcon("/upload", "Upload Lisa's plan", "wb-upload", active === "upload")}
     <a class="wb-signout" href="/oauth2/sign_out">Sign out</a>

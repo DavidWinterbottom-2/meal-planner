@@ -64,7 +64,7 @@ describe("renderWeek", () => {
       out.indexOf("</header>"),
     );
     expect(header).toMatch(
-      /class="wb-brand" href="\/" aria-current="page"><span class="wb-brand__mark">~<\/span>Meal Planner<\/a>/,
+      /class="wb-brand" href="\/" aria-current="page"><span class="wb-brand__mark">~<\/span><span class="mp-brand__long">Meal Planner<\/span><span class="mp-brand__short">Meals<\/span><\/a>/,
     );
     expect(header).not.toMatch(/wb-nav/);
     const acct = header.slice(header.indexOf('class="wb-acct"'));
