@@ -177,8 +177,16 @@ export function dishImageUrl(store, dinner) {
 export function createViewerApp({ store, config, now = () => new Date() }) {
   const app = express();
   const imagesDir = config.dishImages?.dir;
-  const imageFor = config.dishImages?.url
-    ? (dinner) => dishImageUrl(store, dinner)
+  // Saved pictures show whether or not the food-image service is set up:
+  // its address only decides whether new ones are made. A restart without
+  // it must not hide the pictures already on disk.
+  const imageFor = imagesDir
+    ? (dinner) => {
+        const url = dishImageUrl(store, dinner);
+        return url && existsSync(dishImagePath(imagesDir, dishKey(dinner)))
+          ? url
+          : null;
+      }
     : () => null;
   const analytics = config.analytics ?? {};
   const csp = contentSecurityPolicy(analytics);
@@ -263,7 +271,7 @@ export function createViewerApp({ store, config, now = () => new Date() }) {
     if (!week || week.status === "image_only")
       return page(res, 404, renderNotFound({ analytics }));
     const view = buildWeekView(week, date, zurichToday(now()));
-    const thumbs = config.dishImages?.url
+    const thumbs = imagesDir
       ? await dishThumbnails(
           store,
           imagesDir,
