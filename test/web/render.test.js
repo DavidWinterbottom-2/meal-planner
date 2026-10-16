@@ -158,8 +158,12 @@ test("a day with a picture shows it with the dinner as alt text", () => {
     (dinner) => (dinner === "Fish & chips" ? "/dish-images/abc.png?v=1" : null),
   );
   const out = renderWeek(view);
-  expect(out.match(/mp-day__img/g)).toHaveLength(1);
+  expect(out.match(/class="mp-day__img"/g)).toHaveLength(1);
   expect(out).toMatch(
     /src="\/dish-images\/abc.png\?v=1" alt="Fish &amp; chips"/,
+  );
+  // Tapping it opens the dish page, with the week for the back link.
+  expect(out).toMatch(
+    /<a class="mp-day__imglink" href="\/dish\/[0-9a-f]{16}\?week=2026-10-12"/,
   );
 });

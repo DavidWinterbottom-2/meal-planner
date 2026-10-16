@@ -373,6 +373,19 @@ describe("dish pictures", () => {
     );
     const page = await (await fetch(`${offViewer}/week/2026-10-12`)).text();
     const [, src] = /<img class="mp-day__img" src="([^"]+)"/.exec(page);
+    // No service to make a new one: the dish page has no button, and the
+    // redo route is closed.
+    const dish = await (await fetch(`${offViewer}/dish/${fishKey}`)).text();
+    expect(dish).toMatch(/<h1>Fish pie<\/h1>/);
+    expect(dish).not.toMatch(/New picture<\/button>/);
+    expect(
+      (
+        await fetch(`${offViewer}/dish/${fishKey}/redo`, {
+          method: "POST",
+          headers: { "sec-fetch-site": "same-origin" },
+        })
+      ).status,
+    ).toBe(404);
     expect(
       (await fetch(`${offViewer}${src.replace("&amp;", "&")}`)).status,
     ).toBe(200);
@@ -397,6 +410,79 @@ describe("dish pictures", () => {
     expect((await fetch(`${viewer}/dish-images/${fishKey}.png`)).status).toBe(
       404,
     );
+  });
+
+  test("tapping a picture opens its dish page; New picture queues a redo", async () => {
+    const week = await (await fetch(`${picViewer}/week/2026-10-12`)).text();
+    const [, href] = /class="mp-day__imglink" href="([^"]+)"/.exec(week);
+    expect(href).toBe(`/dish/${fishKey}?week=2026-10-12`);
+    const pageUrl = `${picViewer}${href}`;
+    const dish = await (await fetch(pageUrl)).text();
+    expect(dish).toMatch(/<h1>Fish pie<\/h1>/);
+    expect(dish).toMatch(/href="\/week\/2026-10-12"/);
+    expect(dish).toMatch(
+      new RegExp(
+        `<form method="post" action="/dish/${fishKey}/redo\\?week=2026-10-12">`,
+      ),
+    );
+
+    const post = () =>
+      fetch(`${picViewer}/dish/${fishKey}/redo?week=2026-10-12`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { "sec-fetch-site": "same-origin" },
+      });
+    const r = await post();
+    expect(r.status).toBe(303);
+    expect(r.headers.get("location")).toBe(`/dish/${fishKey}?week=2026-10-12`);
+    const row = picStore.getDish(fishKey);
+    expect(row).toMatchObject({ status: "done", redo: 1 });
+    // A second press while queued changes nothing.
+    await post();
+    expect(picStore.getDish(fishKey).generation).toBe(row.generation);
+    const queued = await (await fetch(pageUrl)).text();
+    expect(queued).toMatch(/A new picture is on its way/);
+    expect(queued).not.toMatch(/<form/);
+    // The old picture still shows in the week meanwhile.
+    expect(await (await fetch(`${picViewer}/week/2026-10-12`)).text()).toMatch(
+      /class="mp-day__img"/,
+    );
+    picStore.updateDish(
+      fishKey,
+      { status: "done", attempts: 0 },
+      row.updated_at,
+    );
+  });
+
+  test("a cross-site New picture is refused", async () => {
+    const r = await fetch(`${picViewer}/dish/${fishKey}/redo`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "sec-fetch-site": "cross-site" },
+    });
+    expect(r.status).toBe(403);
+    expect(picStore.getDish(fishKey).redo).toBe(0);
+  });
+
+  test.each([
+    "/dish/0000000000000000", // no such dish
+    "/dish/ABCDEF0123456789", // not a key
+  ])("%s is 404", async (path) => {
+    expect((await fetch(`${picViewer}${path}`)).status).toBe(404);
+  });
+
+  test("a dish without a finished picture has no page", async () => {
+    const { dishKey } = await import("../src/images/dish.js");
+    expect(
+      (await fetch(`${picViewer}/dish/${dishKey("Rack of lamb")}`)).status,
+    ).toBe(404);
+  });
+
+  test("a bad week value falls back to this week for the back link", async () => {
+    const page = await (
+      await fetch(`${picViewer}/dish/${fishKey}?week=2026-10-13`)
+    ).text();
+    expect(page).toMatch(/class="mp-dish__back" href="\/"/);
   });
 
   test("the MCP listener never serves pictures", async () => {

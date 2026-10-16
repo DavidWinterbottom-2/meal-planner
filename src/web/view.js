@@ -10,6 +10,7 @@ import {
   weekDates,
   weekOf,
 } from "../domain/dates.js";
+import { dishKey } from "../images/dish.js";
 
 // "This week", "Next week", "Last week", "In N weeks", "N weeks ago".
 export function weekBadge(weekStart, today) {
@@ -79,6 +80,10 @@ export function buildWeekView(week, weekStart, today, imageFor = () => null) {
         isPast: d.date < today,
         dinner: d.dinner || null,
         image: d.dinner ? imageFor(d.dinner) : null,
+        // Tapping the picture opens its dish page (add-dish-picture-redo).
+        imageHref: d.dinner
+          ? `/dish/${dishKey(d.dinner)}?week=${weekStart}`
+          : null,
         lunch,
         kita: lunch === "Thomas at Kita",
         snacks: snack,

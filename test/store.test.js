@@ -60,8 +60,10 @@ describe("schema", () => {
       "attempts",
       "error",
       "updated_at",
+      "redo",
+      "generation",
     ]);
-    expect(store._db.pragma("user_version", { simple: true })).toBe(3);
+    expect(store._db.pragma("user_version", { simple: true })).toBe(4);
   });
 
   test("reopening an existing file keeps its data", () => {

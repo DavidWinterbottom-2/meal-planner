@@ -112,11 +112,15 @@ h1 {
   color: var(--accent);
 }
 /* A generated dish picture beside the dinner (OpenSpec add-dish-images). */
-.mp-day__img {
+.mp-day__imglink {
   float: right;
+  margin: 2px 0 4px 10px;
+  border-radius: var(--r);
+}
+.mp-day__img {
+  display: block;
   width: 72px;
   height: 72px;
-  margin: 2px 0 4px 10px;
   border-radius: var(--r);
   object-fit: cover;
   background: var(--surface-2);
@@ -260,4 +264,30 @@ details.mp-original summary {
 .mp-upload .wb-error {
   color: var(--neg);
   font-weight: 600;
+}
+
+/* A dish picture large, with its New picture button (add-dish-picture-redo). */
+.mp-dish__back {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+.mp-dish__img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  margin: 12px 0 16px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.mp-dish__queued {
+  white-space: normal;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  letter-spacing: normal;
+  text-transform: none;
+  border-radius: var(--r);
+  padding: 10px 12px;
 }
