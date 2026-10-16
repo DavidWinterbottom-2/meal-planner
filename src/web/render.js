@@ -7,6 +7,12 @@ import { asset } from "../version.js";
 import { analyticsTag } from "./analytics.js";
 
 const PLAN_IN_CLAUDE = "https://claude.ai/new";
+// What's in the freezer and the cellar: a Flatnotes note David edits there.
+// A plain link, so the app still never calls Flatnotes or holds its login.
+const PANTRY_NOTE =
+  "https://flatnotes.winterbottom.xyz/note/Meals%20-%20Pantry";
+// Lucide "refrigerator" (ISC), as the header's pantry button.
+const FRIDGE_ICON = `<svg class="wb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Z"/><path d="M5 10h14"/><path d="M15 7v6"/></svg>`;
 
 // The app's mark in the header tile: the home-screen icon's plate, fork and
 // knife (assets/icon/meals-icon.svg) in the tile's ink colour.
@@ -46,6 +52,7 @@ ${raw(analyticsTag(analytics))}
 <header class="wb-appbar">
   <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">${raw(BRAND_MARK)}</span><span class="mp-brand__name">Meal Planner</span></a>
   <div class="wb-acct">
+    <a class="wb-iconbtn" href="${PANTRY_NOTE}" rel="noopener" aria-label="Freezer and pantry (Flatnotes)" title="Freezer and pantry">${raw(FRIDGE_ICON)}</a>
     <a class="wb-signout" href="/oauth2/sign_out">Sign out</a>
     <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Toggle theme"><span data-wb-theme-icon>☀</span></button>
   </div>

@@ -36,6 +36,14 @@ body {
 .wb-acct {
   flex: none;
 }
+@media (max-width: 420px) {
+  .wb-appbar {
+    gap: 8px;
+  }
+  .wb-acct {
+    gap: 6px;
+  }
+}
 
 .mp-main {
   max-width: 640px;
