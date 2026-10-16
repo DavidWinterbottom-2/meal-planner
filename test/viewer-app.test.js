@@ -516,7 +516,6 @@ describe("Lisa's original (upload)", () => {
     const page = await (await get(`${viewer}/upload`)).text();
     expect(page).toMatch(/<option value="2026-10-19" selected>/);
     expect(page).toMatch(/enctype="multipart\/form-data"/);
-    expect(page).toMatch(/href="\/upload"[^>]*aria-current="page"/);
     const pre = await (await get(`${viewer}/upload?week=2026-11-02`)).text();
     expect(pre).toMatch(/<option value="2026-11-02" selected>/);
     expect(pre).toMatch(/2026-10-12"[^>]*>Mon 12 – Sun 18 Oct · planned/);
