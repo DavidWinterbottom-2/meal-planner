@@ -74,7 +74,7 @@ test.describe("viewer listener", () => {
     const bg = await page.evaluate(
       () => getComputedStyle(document.body).backgroundColor,
     );
-    expect(bg).toBe("rgb(12, 14, 18)"); // --bg in dark
+    expect(bg).toBe("rgb(20, 26, 21)"); // --bg in dark (app.css)
   });
 
   async function swipe(page, dx, dy) {
