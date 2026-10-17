@@ -65,8 +65,8 @@ export const MANIFEST = {
   start_url: "/",
   scope: "/",
   display: "standalone",
-  background_color: "#f3f5f8",
-  theme_color: "#f3f5f8",
+  background_color: "#f4f2ea",
+  theme_color: "#f4f2ea",
   icons: [
     { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
     // Full-bleed with the drawing inside the safe zone, so Android can

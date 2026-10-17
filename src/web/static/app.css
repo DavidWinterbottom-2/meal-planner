@@ -327,3 +327,240 @@ details.mp-original summary {
   padding-left: 1.2em;
   overflow-wrap: anywhere;
 }
+
+/* =========================================================================
+   Nourished Family Table: Lisa's look, from her printed plans and recipe
+   cards. Cream paper, sage and peach panels, deep green serif headings and
+   olive-branch sprigs. It re-points the design system's tokens (so every
+   wb-* component follows) and adds the few touches the tokens can't carry.
+   The palette matches the shared plan image (src/web/week-image.js).
+   ========================================================================= */
+
+/* Lora Bold, the serif the plan image already uses (assets/fonts, OFL). */
+@font-face {
+  font-family: "Lora";
+  src: url("fonts/Lora-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #f4f2ea;
+  --surface: #fcfbf6;
+  --surface-2: #eeece2;
+  --border: #e1e3d6;
+  --ink: #1f3a2b;
+  --ink-2: #4f5d52;
+  --ink-3: #87917f;
+  --accent: #3f6b4a;
+  --accent-hover: #335a3d;
+  --accent-ink: #ffffff;
+  --accent-tint: #e3eadb;
+  --nft-sage: #dde6d3;
+  --nft-peach: #f6e1d0;
+  --nft-peach-ink: #8a4f2c;
+  --font-serif: "Lora", Georgia, "Times New Roman", serif;
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 18px;
+  --shadow: 0 1px 2px rgba(31, 58, 43, 0.06), 0 8px 24px rgba(31, 58, 43, 0.06);
+  --shadow-sm: 0 1px 2px rgba(31, 58, 43, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141a15;
+    --surface: #1b231d;
+    --surface-2: #222b23;
+    --border: #2f3a31;
+    --ink: #e8ece2;
+    --ink-2: #b2bcaf;
+    --ink-3: #7f8a7c;
+    --accent: #a8c49a;
+    --accent-hover: #bcd4ae;
+    --accent-ink: #15200f;
+    --accent-tint: #243225;
+    --nft-sage: #26332a;
+    --nft-peach: #3a2c22;
+    --nft-peach-ink: #e9b893;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141a15;
+  --surface: #1b231d;
+  --surface-2: #222b23;
+  --border: #2f3a31;
+  --ink: #e8ece2;
+  --ink-2: #b2bcaf;
+  --ink-3: #7f8a7c;
+  --accent: #a8c49a;
+  --accent-hover: #bcd4ae;
+  --accent-ink: #15200f;
+  --accent-tint: #243225;
+  --nft-sage: #26332a;
+  --nft-peach: #3a2c22;
+  --nft-peach-ink: #e9b893;
+}
+
+/* Botanical shapes (static/botanical/), drawn as masks so they take the
+   theme's colours. Files, not data: URLs, which the CSP's img-src refuses. */
+:root {
+  --nft-branch: url("botanical/branch.svg");
+  --nft-divider: url("botanical/divider.svg");
+  --nft-sprig: url("botanical/sprig.svg");
+}
+
+/* Header: cream bar, serif uppercase name, sage mark. */
+.wb-appbar {
+  background: var(--surface);
+}
+.wb-brand {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.wb-signout {
+  font-family: var(--font-sans);
+}
+
+/* Headings: deep green serif capitals, like WEEK 1 on her plans. */
+h1 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+/* Small labels and pills: sans instead of the system's monospace. */
+.wb-pill {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.wb-eyebrow,
+.wb-label {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+/* The week title on a painted sage band, an olive branch in the top corner
+   and a heart rule beneath. */
+.mp-week__head {
+  position: relative;
+  text-align: center;
+  padding-top: 28px;
+}
+.mp-week__head::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 88px;
+  height: 48px;
+  background: var(--accent);
+  opacity: 0.75;
+  -webkit-mask: var(--nft-branch) no-repeat center / contain;
+  mask: var(--nft-branch) no-repeat center / contain;
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+.mp-week__head h1 {
+  display: inline-block;
+  font-size: 1.2rem;
+  padding: 7px 22px;
+  background: var(--nft-sage);
+  border-radius: 46% 54% 42% 58% / 62% 44% 56% 38%;
+}
+.mp-week__meta::before {
+  content: "";
+  flex-basis: 100%;
+  height: 14px;
+  margin: 2px 0 6px;
+  background: var(--accent);
+  -webkit-mask: var(--nft-divider) no-repeat center / 150px 14px;
+  mask: var(--nft-divider) no-repeat center / 150px 14px;
+}
+
+/* Days: soft paper cards; the day name in bold capitals. */
+.mp-day {
+  border-color: var(--border);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+.mp-day--today {
+  background: var(--nft-sage);
+  border-color: var(--accent);
+}
+.mp-day__date {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.mp-day--today .mp-day__date {
+  color: var(--ink);
+}
+.mp-day__dinner {
+  color: var(--ink);
+}
+.mp-day__dinner--none {
+  color: var(--ink-3);
+}
+.mp-day__img {
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Prep and notes: tinted panels with a sprig, like her WEEK NOTES boxes.
+   The first is sage, a second one peach. */
+section.mp-block {
+  position: relative;
+  background: var(--nft-sage);
+  border-radius: var(--r);
+  padding: 14px 52px 14px 16px;
+}
+section.mp-block + section.mp-block {
+  background: var(--nft-peach);
+}
+section.mp-block + section.mp-block h2 {
+  color: var(--nft-peach-ink);
+}
+section.mp-block::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  width: 30px;
+  height: 36px;
+  background: var(--accent);
+  opacity: 0.55;
+  -webkit-mask: var(--nft-sprig) no-repeat center / contain;
+  mask: var(--nft-sprig) no-repeat center / contain;
+}
+section.mp-block .mp-pre {
+  color: var(--ink);
+}
+
+/* Empty week and other notices: cream card with a sage dashed edge. */
+.mp-empty {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+/* All weeks list: the dates as bold capitals, like the day names. */
+.mp-history__when {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+.mp-history__list a {
+  box-shadow: var(--shadow-sm);
+}

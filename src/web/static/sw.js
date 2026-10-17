@@ -23,6 +23,10 @@ const PRECACHE = [
     "/static/share.js",
     "/static/offline.js",
   ].map((path) => `${path}?v=${VERSION}`),
+  "/static/fonts/Lora-Bold.woff",
+  "/static/botanical/branch.svg",
+  "/static/botanical/divider.svg",
+  "/static/botanical/sprig.svg",
   "/icons/icon-192.png",
 ];
 // Also saved at install, best effort, so they work offline before a visit.
