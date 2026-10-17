@@ -164,6 +164,7 @@ describe("installable app", () => {
       "winterbottom-theme.js",
       "app.css",
       "swipe.js",
+      "fonts/Lora-Bold.woff",
     ]) {
       expect((await get(`${viewer}/static/${f}`)).status).toBe(200);
     }

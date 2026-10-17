@@ -32,9 +32,9 @@ function layout({
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${title}</title>
-<!-- Browser chrome colour: the design system's --bg values (meta tags cannot read CSS tokens). -->
-<meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0c0e12" media="(prefers-color-scheme: dark)">
+<!-- Browser chrome colour: the --bg values in app.css (meta tags cannot read CSS tokens). -->
+<meta name="theme-color" content="#f4f2ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141a15" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Meals">
 <link rel="manifest" href="/manifest.webmanifest">
