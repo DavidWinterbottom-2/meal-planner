@@ -50,10 +50,18 @@ ${raw(analyticsTag(analytics))}
 </head>
 <body>
 <header class="wb-appbar">
-  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">${raw(BRAND_MARK)}</span><span class="mp-brand__name">Meal Planner</span></a>
+  <a class="wb-brand" href="/"${raw(active === "week" ? ' aria-current="page"' : "")}><span class="wb-brand__mark">${raw(BRAND_MARK)}</span><span class="wb-brand__name">Meal Planner</span></a>
   <div class="wb-acct">
     <a class="wb-iconbtn" href="${PANTRY_NOTE}" rel="noopener" aria-label="Freezer and pantry (Flatnotes)" title="Freezer and pantry">${raw(FRIDGE_ICON)}</a>
     <a class="wb-signout" href="/oauth2/sign_out">Sign out</a>
+    <details class="wb-textsize">
+      <summary class="wb-iconbtn" aria-label="Text size" title="Text size">Aa</summary>
+      <div class="wb-textsize__menu" role="group" aria-label="Text size">
+        <button type="button" data-wb-text-size="small">Small</button>
+        <button type="button" data-wb-text-size="normal">Normal</button>
+        <button type="button" data-wb-text-size="large">Large</button>
+      </div>
+    </details>
     <button class="wb-iconbtn" type="button" data-wb-theme-toggle aria-label="Toggle theme"><span data-wb-theme-icon>☀</span></button>
   </div>
 </header>

@@ -57,14 +57,14 @@ describe("renderWeek", () => {
     );
   });
 
-  test("header: brand, pantry note, sign-out and theme; Upload sits by the week title", () => {
+  test("header: brand, pantry note, sign-out, text size and theme; Upload sits by the week title", () => {
     const out = renderWeek(buildWeekView(week, "2026-10-12", "2026-10-15"));
     const header = out.slice(
       out.indexOf('<header class="wb-appbar">'),
       out.indexOf("</header>"),
     );
     expect(header).toMatch(
-      /class="wb-brand" href="\/" aria-current="page"><span class="wb-brand__mark"><svg class="mp-brand__icon"[^]*?<\/svg><\/span><span class="mp-brand__name">Meal Planner<\/span><\/a>/,
+      /class="wb-brand" href="\/" aria-current="page"><span class="wb-brand__mark"><svg class="mp-brand__icon"[^]*?<\/svg><\/span><span class="wb-brand__name">Meal Planner<\/span><\/a>/,
     );
     expect(header).not.toMatch(/wb-nav|\/upload/);
     const acct = header.slice(header.indexOf('class="wb-acct"'));
@@ -74,6 +74,25 @@ describe("renderWeek", () => {
     ]);
     expect(acct).toMatch(/aria-label="Freezer and pantry \(Flatnotes\)"/);
     expect(acct).toMatch(/data-wb-theme-toggle/);
+    // Order: own buttons, Sign out, Aa text size, theme toggle last.
+    const order = [
+      "Freezer and pantry",
+      "wb-signout",
+      "wb-textsize",
+      "data-wb-theme-toggle",
+    ].map((needle) => acct.indexOf(needle));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(
+      [...acct.matchAll(/data-wb-text-size="([a-z]+)"/g)].map((m) => m[1]),
+    ).toEqual(["small", "normal", "large"]);
+    expect(acct).toMatch(
+      /<summary class="wb-iconbtn" aria-label="Text size" title="Text size">Aa<\/summary>/,
+    );
+    // No "signed in as" anywhere in the bar.
+    expect(header).not.toMatch(/wb-who|signed in/i);
+    // Strict CSP: nothing inline in the page.
+    expect(out).not.toMatch(/<script(?![^>]*\ssrc=)[^>]*>|<style|\sstyle=/);
     expect(out).not.toMatch(/<footer/);
     // Upload goes in the row under the week title, for that week.
     const meta = out.slice(

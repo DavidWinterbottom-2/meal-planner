@@ -61,6 +61,76 @@ test.describe("viewer listener", () => {
     }
   });
 
+  test("the header is one row at 320 and 375px, at Normal and Large text", async ({
+    page,
+  }) => {
+    for (const width of [320, 375]) {
+      for (const size of ["normal", "large"]) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto("/");
+        await page.evaluate(
+          (s) => localStorage.setItem("wb-text-size", s),
+          size,
+        );
+        await page.reload();
+        const label = `${width}px, ${size}`;
+        const header = await page.locator(".wb-appbar").boundingBox();
+        expect(header.height, label).toBeLessThan(72);
+        const brand = await page.locator(".wb-brand").boundingBox();
+        const kids = page.locator(".wb-acct > *");
+        expect(await kids.count(), label).toBe(4);
+        for (const box of await kids.evaluateAll((els) =>
+          els.map((el) => el.getBoundingClientRect().toJSON()),
+        )) {
+          // Same row: each control's centre lines up with the brand's.
+          const mid = box.top + box.height / 2;
+          expect(
+            Math.abs(mid - (brand.y + brand.height / 2)),
+            label,
+          ).toBeLessThanOrEqual(8);
+        }
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        );
+        expect(overflow, label).toBeLessThanOrEqual(0);
+      }
+    }
+  });
+
+  test("the header has no signed-in name; theme toggle is last", async ({
+    page,
+  }) => {
+    await page.goto(WEEK);
+    await expect(page.locator(".wb-who")).toHaveCount(0);
+    await expect(page.locator(".wb-appbar")).not.toContainText(/signed in/i);
+    await expect(page.locator(".wb-acct > *").last()).toHaveAttribute(
+      "data-wb-theme-toggle",
+      "",
+    );
+  });
+
+  test("Aa sets Large text, and it survives a reload", async ({ page }) => {
+    await page.goto(WEEK);
+    const rootPx = () =>
+      page.evaluate(() =>
+        parseFloat(getComputedStyle(document.documentElement).fontSize),
+      );
+    expect(await rootPx()).toBe(16);
+    await page.locator(".wb-textsize summary").click();
+    await page.locator('[data-wb-text-size="large"]').click();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-text-size",
+      "large",
+    );
+    expect(await rootPx()).toBe(18);
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-text-size",
+      "large",
+    );
+    expect(await rootPx()).toBe(18);
+  });
+
   test("only today shows the Today pill", async ({ page }) => {
     // The phone's clock marks today (offline.js), so pin it inside the
     // seeded week: "/" is an unplanned week, with no day rows, once the
