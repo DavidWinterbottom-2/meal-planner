@@ -62,10 +62,15 @@ test.describe("viewer listener", () => {
   });
 
   test("only today shows the Today pill", async ({ page }) => {
-    // "/" always contains today; every other row's pill must stay hidden.
-    await page.goto("/");
+    // The phone's clock marks today (offline.js), so pin it inside the
+    // seeded week: "/" is an unplanned week, with no day rows, once the
+    // real date passes the seeds. Every other row's pill must stay hidden.
+    await page.clock.setFixedTime(new Date("2026-10-14T10:00:00Z"));
+    await page.goto(WEEK);
     await expect(page.locator(".mp-today-pill:visible")).toHaveCount(1);
-    await expect(page.locator(".mp-day--today .mp-today-pill")).toBeVisible();
+    await expect(
+      page.locator('.mp-day--today[data-date="2026-10-14"] .mp-today-pill'),
+    ).toBeVisible();
   });
 
   test("dark mode follows the device", async ({ page }) => {
