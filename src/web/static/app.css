@@ -14,35 +14,9 @@ body {
 .wb-appbar {
   padding-top: max(10px, env(safe-area-inset-top));
 }
-/* The header stays on one line on any phone, whatever its width, font or
-   text-size setting: the buttons keep their size, and if space runs out the
-   name is cut short with an ellipsis instead of the row wrapping. */
-.wb-appbar {
-  flex-wrap: nowrap;
-}
-.wb-brand {
-  min-width: 0;
-}
 .mp-brand__icon {
   width: 20px;
   height: 20px;
-}
-.mp-brand__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.wb-acct {
-  flex: none;
-}
-@media (max-width: 420px) {
-  .wb-appbar {
-    gap: 8px;
-  }
-  .wb-acct {
-    gap: 6px;
-  }
 }
 
 .mp-main {
