@@ -177,7 +177,8 @@ a { color: var(--accent); }
   padding: 7px 12px; border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
 }
 .wb-subnav a:hover, .wb-subnav button:hover { background: var(--surface-2); color: var(--ink); }
-.wb-subnav [aria-current], .wb-subnav .is-active, .wb-subnav [aria-selected="true"] { color: var(--accent); background: var(--accent-tint); font-weight: 600; }
+.wb-subnav [aria-current], .wb-subnav .is-active, .wb-subnav [aria-selected="true"],
+.wb-subnav [aria-current]:hover, .wb-subnav .is-active:hover, .wb-subnav [aria-selected="true"]:hover { color: var(--accent); background: var(--accent-tint); font-weight: 600; }
 /* Account cluster, always in this order: the app's own icon buttons, Sign out,
    text size (Aa), theme toggle. It never shrinks and never says who is
    signed in — Sign out is the signed-in cue. */
