@@ -36,6 +36,12 @@ with phone and desktop screenshots, from planning in Claude to the week view.
   picture stays until the new one, made with a new seed, is ready. Saved
   pictures show even when `FOOD_IMAGE_URL` is unset; it only controls making
   new ones. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
+  Each picture must show the whole plate, clear of the edges, on a plain
+  surface: if it doesn't, the worker asks again with a new seed, up to 5
+  times, and saves the first that does cropped to a tight square around the
+  plate (after 5 misses it keeps the last one uncropped). To redo every
+  picture after a style change, run
+  `docker exec meal-planner node src/redo-dish-pictures.js`.
 - **Dinner ingredients.** When Claude saves a plan it fills in each cooked
   dinner's ingredients from the recipes note (freezer items marked
   "(freezer)"). The week page shows them in an **Ingredients** fold-out under
@@ -250,6 +256,12 @@ Code and architecture reviews are recorded in
 [`docs/reviews/LOG.md`](docs/reviews/LOG.md) (§9).
 
 ## Updates
+
+### 2026-10 — whole-plate dish pictures
+
+- Dish pictures are checked for the whole plate (up to 5 tries) and cropped
+  tight to it; `src/redo-dish-pictures.js` queues every picture for a redo.
+  Pairs with image-studio 0.8.0's overhead whole-plate food style.
 
 ### 2026-10 — dish pictures
 

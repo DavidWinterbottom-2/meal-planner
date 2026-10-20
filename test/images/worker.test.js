@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from "vitest";
+import sharp from "sharp";
 import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,14 +7,20 @@ import { openStore } from "../../src/store.js";
 import {
   createDishImageWorker,
   dishImagePath,
+  FRAMING_TRIES,
   MAX_ATTEMPTS,
 } from "../../src/images/worker.js";
 import { DEFAULT_SKIP, dishKey } from "../../src/images/dish.js";
 
-const PNG = Buffer.concat([
-  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  Buffer.from("pixels"),
-]);
+// A picture that passes the whole-plate check as it is (the plate nearly
+// fills it, clear of the edges), so it is saved byte for byte.
+const plateSvg = (cx, r) =>
+  Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#6b4f3a"/><circle cx="${cx}" cy="128" r="${r}" fill="#f4f1ea"/></svg>`,
+  );
+const PNG = await sharp(plateSvg(128, 118)).png().toBuffer();
+// A plate running off the left edge: fails the check.
+const CUT_OFF = await sharp(plateSvg(40, 100)).png().toBuffer();
 const AT = "2026-10-15T10:00:00.000Z";
 const KEY = "k".repeat(40);
 
@@ -115,6 +122,42 @@ describe("dish picture worker", () => {
     expect(existsSync(dishImagePath(dir, dishKey("Fish pie")))).toBe(false);
   });
 
+  test("asks again with a new seed until the whole plate is in the picture", async () => {
+    replies.push(
+      respond(200, CUT_OFF),
+      respond(200, CUT_OFF),
+      respond(200, PNG),
+    );
+    expect(await worker().runOnce()).toBe("done");
+    expect(calls).toHaveLength(3);
+    expect(new Set(calls.map((c) => c.body.seed)).size).toBe(3);
+    expect(readFileSync(dishImagePath(dir, dishKey("Fish pie")))).toEqual(PNG);
+    expect(logs.filter((m) => m.includes("whole plate"))).toHaveLength(2);
+  });
+
+  test(`after ${FRAMING_TRIES} misses it keeps the last picture uncropped`, async () => {
+    for (let i = 0; i < FRAMING_TRIES + 1; i++)
+      replies.push(respond(200, CUT_OFF));
+    expect(await worker().runOnce()).toBe("done");
+    expect(calls).toHaveLength(FRAMING_TRIES);
+    const key = dishKey("Fish pie");
+    expect(readFileSync(dishImagePath(dir, key))).toEqual(CUT_OFF);
+    expect(store.getDish(key).status).toBe("done");
+    expect(logs.at(-1)).toContain("kept uncropped");
+  });
+
+  test.each([
+    ["the service drops out", () => new Error("ECONNREFUSED")],
+    ["the service gets busy", () => respond(503)],
+    ["the service errors", () => respond(500, "boom")],
+  ])("keeps a picture it already has when %s mid-way", async (_, reply) => {
+    replies.push(respond(200, CUT_OFF), reply());
+    expect(await worker().runOnce()).toBe("done");
+    expect(readFileSync(dishImagePath(dir, dishKey("Fish pie")))).toEqual(
+      CUT_OFF,
+    );
+  });
+
   test("a redo keeps the old picture until the new one is saved, with a new seed", async () => {
     const key = dishKey("Fish pie");
     const NEW = Buffer.concat([PNG, Buffer.from("new")]);
@@ -214,6 +257,38 @@ describe("store: dish pictures", () => {
     expect(store.syncDishImages(AT)).toBe(2);
     expect(store.syncDishImages(AT)).toBe(0);
     expect(store.nextPendingDish().dish_text).toBe("Fish pie");
+  });
+
+  test("redo-all queues every finished picture once, keeping it shown", () => {
+    store.saveWeek(
+      {
+        week_start: "2026-10-19",
+        days: [
+          { date: "2026-10-19", dinner: "Lasagne" },
+          { date: "2026-10-20", dinner: "Soup" },
+        ],
+      },
+      AT,
+    );
+    store.syncDishImages(AT);
+    const done = [dishKey("Fish pie"), dishKey("Lasagne")];
+    for (const key of done)
+      store.updateDish(key, { status: "done", attempts: 0 }, AT);
+    const LATER = "2026-10-20T10:00:00.000Z";
+    expect(store.redoAllDishes(LATER)).toBe(2);
+    for (const key of done)
+      expect(store.getDish(key)).toMatchObject({
+        status: "done",
+        redo: 1,
+        generation: 1,
+        updated_at: LATER,
+      });
+    // Pending and skipped dinners are untouched; a second run adds nothing.
+    expect(store.getDish(dishKey("Soup"))).toMatchObject({
+      status: "pending",
+      redo: 0,
+    });
+    expect(store.redoAllDishes(LATER)).toBe(0);
   });
 
   test("regenerate resets a picture, and refuses skipped dinners", () => {

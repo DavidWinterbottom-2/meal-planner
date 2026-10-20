@@ -167,6 +167,13 @@ export function openStore(path = ":memory:") {
          generation = generation + 1, attempts = 0, error = NULL,
          updated_at = excluded.updated_at`,
     ),
+    // Every finished picture queued for a new one at once (after a style
+    // change), each keeping its old picture until the new one is saved.
+    redoAllDishes: db.prepare(
+      `UPDATE dish_image SET redo = 1, generation = generation + 1,
+       attempts = 0, error = NULL, updated_at = ?
+       WHERE status = 'done' AND redo = 0`,
+    ),
   };
 
   // The stored week with its stored days only (no padding), or null.
@@ -427,6 +434,9 @@ export function openStore(path = ":memory:") {
       if (!queued) q.redoDish.run({ key, dish_text: text, updated_at: at });
       return q.dish.get(key);
     },
+
+    // Returns how many pictures were queued.
+    redoAllDishes: (at) => q.redoAllDishes.run(at).changes,
 
     // True only for a database that has never held a week, so deleting every
     // week never brings the seed examples back.
