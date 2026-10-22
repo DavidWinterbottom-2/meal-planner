@@ -5,6 +5,10 @@ Family meal planner: phone web viewer plus an MCP server so Claude can plan, sav
 ## Workflow
 
 - Default branch is `main`, protected, changes land via PR (§1).
+  `main` carries a ruleset (Settings → Rules → Rulesets, target `main`): require a PR
+  with ≥1 approval, require the `ci` status checks `version-bumped`, `lint`, `test` and `e2e`
+  to pass, block force pushes and deletion. No direct pushes — open a PR, get CI green,
+  never merge your own PR unasked.
 - Feature branches, named for **who** created them and **why**:
   - Claude following a skill → `claude/<skill-name>/<description>`
   - Claude resolving an OpenSpec change → `openspec/<change-id>`
