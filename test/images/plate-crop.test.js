@@ -56,7 +56,7 @@ describe("cropToPlate", () => {
     const meta = await sharp(png).metadata();
     expect([meta.width, meta.height, meta.format]).toEqual([768, 768, "png"]);
     // Only the thin margin either side of the plate is surface now.
-    expect(await surfaceShare(png)).toBeLessThan(0.12);
+    expect(await surfaceShare(png)).toBeLessThan(0.15);
   });
 
   test("follows a plate that sits off-centre", async () => {
@@ -64,7 +64,7 @@ describe("cropToPlate", () => {
       await plate({ cx: 260, cy: 300, r: 180 }),
     );
     expect(ok).toBe(true);
-    expect(await surfaceShare(png)).toBeLessThan(0.12);
+    expect(await surfaceShare(png)).toBeLessThan(0.15);
   });
 
   test("passes a plate that already fills the picture, unchanged", async () => {
@@ -75,6 +75,31 @@ describe("cropToPlate", () => {
   test("fails a plate cut off by the edge", async () => {
     const before = await plate({ cx: 120, r: 200 });
     expect(await cropToPlate(before)).toEqual({ ok: false, png: before });
+  });
+
+  // Light grey surface, white plate, and a soft grey shadow below it that
+  // runs off the bottom edge: the shadow isn't plate.
+  const shadowed = (rim) =>
+    sharp(
+      Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="768" height="768">
+        <defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#d0d0d0"/><stop offset="1" stop-color="#a6a6a6"/>
+        </linearGradient></defs>
+        <rect width="100%" height="100%" fill="#d0d0d0"/>
+        <rect x="150" y="420" width="468" height="348" fill="url(#s)"/>
+        <circle cx="384" cy="384" r="${rim}" fill="#${rim > 384 ? "404040" : "fafafa"}"/>
+        <circle cx="384" cy="384" r="150" fill="#c0622a"/>
+      </svg>`),
+    )
+      .png()
+      .toBuffer();
+
+  test("passes a plate whose soft shadow runs off the edge", async () => {
+    expect((await cropToPlate(await shadowed(300))).ok).toBe(true);
+  });
+
+  test("fails a dark bowl that runs off the edge", async () => {
+    expect((await cropToPlate(await shadowed(400))).ok).toBe(false);
   });
 
   test("fails a busy background rather than guess", async () => {

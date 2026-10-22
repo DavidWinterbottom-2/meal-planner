@@ -10,9 +10,13 @@ import sharp from "sharp";
 // Detection runs on a small blurred copy: fast, and texture in the surface
 // (wood grain, linen) blurs into its average colour.
 const GRID = 128;
-// How far (RGB distance) a pixel must be from the surface colour to count
-// as plate.
-const DIFF = 48;
+// When a pixel counts as plate rather than surface. Plates are lighter than
+// the light grey surface and food is coloured, while the plate's soft shadow
+// is only a darker grey: so a pixel must be this much lighter, this far off
+// the surface's colour, or very much darker (a dark bowl's rim).
+const LIGHTER = 20;
+const CHROMA = 25;
+const DARKER = 90;
 // A border this noisy isn't a plain surface: don't guess.
 const MAX_BORDER_SPREAD = 40;
 // A row or column belongs to the plate when this share of it differs.
@@ -41,6 +45,17 @@ export function findPlate(rgb, size = GRID) {
     border.push(px(i, 0), px(i, size - 1), px(0, i), px(size - 1, i));
   const bg = [0, 1, 2].map((c) => median(border.map((p) => p[c])));
   const dist = (p) => Math.hypot(p[0] - bg[0], p[1] - bg[1], p[2] - bg[2]);
+  const lum = (p) => (p[0] + p[1] + p[2]) / 3;
+  const bgLum = lum(bg);
+  const isPlate = (p) => {
+    const l = lum(p);
+    const chroma = Math.hypot(
+      p[0] - l - (bg[0] - bgLum),
+      p[1] - l - (bg[1] - bgLum),
+      p[2] - l - (bg[2] - bgLum),
+    );
+    return l - bgLum > LIGHTER || bgLum - l > DARKER || chroma > CHROMA;
+  };
   // Most of the border must be surface; a plate touching one edge is fine.
   if (median(border.map(dist)) > MAX_BORDER_SPREAD / 2) return null;
 
@@ -48,7 +63,7 @@ export function findPlate(rgb, size = GRID) {
   const cols = new Array(size).fill(0);
   for (let y = 0; y < size; y++)
     for (let x = 0; x < size; x++)
-      if (dist(px(x, y)) > DIFF) {
+      if (isPlate(px(x, y))) {
         rows[y]++;
         cols[x]++;
       }

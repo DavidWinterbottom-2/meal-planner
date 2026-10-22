@@ -37,7 +37,7 @@ with phone and desktop screenshots, from planning in Claude to the week view.
   pictures show even when `FOOD_IMAGE_URL` is unset; it only controls making
   new ones. Pictures live in `DISH_IMAGES_DIR` (default `/data/dish-images`).
   Each picture must show the whole plate, clear of the edges, on a plain
-  surface: if it doesn't, the worker asks again with a new seed, up to 5
+  surface (the plate's own soft shadow may reach the edge): if it doesn't, the worker asks again with a new seed, up to 5
   times, and saves the first that does cropped to a tight square around the
   plate (after 5 misses it keeps the last one uncropped). To redo every
   picture after a style change, run
@@ -256,6 +256,11 @@ Code and architecture reviews are recorded in
 [`docs/reviews/LOG.md`](docs/reviews/LOG.md) (§9).
 
 ## Updates
+
+### 2026-10 — plate shadows don't fail the check
+
+- The whole-plate check no longer mistakes the plate's soft grey shadow
+  running off the edge for the plate itself.
 
 ### 2026-10 — whole-plate dish pictures
 
