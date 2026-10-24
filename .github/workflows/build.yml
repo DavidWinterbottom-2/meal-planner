@@ -3,10 +3,16 @@
 # better-sqlite3 binary loads; pushes to main also publish it to GHCR as
 # `latest`, the package.json version, and `sha-<short commit>` (the tag a
 # rollback pins with IMAGE_TAG in docker-infra).
+#
+# Minutes: draft PRs skip the build (marking ready runs it), and a new push
+# cancels the PR's still-running build. Pushes to main each get their own
+# concurrency group, so a publish is never cancelled or dropped. `image` is not
+# a required check, so the `paths` filter below can't leave one "Expected".
 name: build
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - Dockerfile
       - .dockerignore
@@ -20,12 +26,18 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   IMAGE: ghcr.io/davidwinterbottom-2/meal-planner
 
 jobs:
   image:
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30 # arm64 under QEMU: recent runs took 1-4 min
     permissions:
       contents: read
       packages: write
