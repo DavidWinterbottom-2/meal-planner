@@ -1,22 +1,53 @@
 name: ci
 
+# Minutes are saved on PRs: `changes` classifies the diff with
+# .github/scripts/code-changed.sh, and test/e2e are skipped (reported as
+# passing, so the required checks don't block) when the PR touches docs only
+# or is a draft. Marking a draft ready runs everything. A new push cancels the
+# PR's still-running CI; push runs on main each get their own group and are
+# never cancelled, and always run the full suite. If `changes` fails, the
+# gated jobs run rather than skip.
+
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  # §2: every PR must bump the version in its single source of truth, or this
-  # fails the PR. Unconditional on purpose (see the version-bump-check skill) —
-  # no path filter guessing which PRs "ship", since over-bumping a docs/CI-only
-  # PR is harmless (images deploy by SHA) but a missed real bump isn't.
-  version-bumped:
+  changes:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: diff
+        run: .github/scripts/code-changed.sh | tee -a "$GITHUB_OUTPUT"
+
+  # §2: every PR that changes what ships must bump the version in its single
+  # source of truth, or this fails the PR. Docs-only PRs (code-changed.sh) ship
+  # nothing and are exempt; everything else is code, so a missing rule errs
+  # towards requiring the bump. PR-only: there is no base to compare on a push.
+  version-bumped:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - name: Fail if the version wasn't bumped
         run: |
+          if .github/scripts/code-changed.sh | grep -qx 'code=false'; then
+            echo "docs-only change: no bump required" && exit 0
+          fi
           base="origin/${{ github.base_ref }}"
           git fetch origin "${{ github.base_ref }}" --depth=1
 
@@ -30,27 +61,36 @@ jobs:
 
   # §10: lint + format-check every file. Runs in check mode so an unformatted or
   # lint-failing file fails the PR rather than being reformatted behind your back.
+  # Ungated: it is fast, and prettier checks the Markdown a docs-only PR changes.
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
       - run: npm ci
       - run: npm run lint
 
   # §4: run the tests and enforce the >=80% coverage floor. The gate fails the PR
   # when coverage drops below 80% — it is not merely reported.
   test:
+    needs: changes
+    # Fails safe: on a push (changes skipped) or if changes itself breaks, the
+    # output is empty, not 'false', so the job runs.
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
       - run: npm ci
       - run: npm test
       # The vendored OAuth module keeps its own node:test suite (src/vendor/README.md).
@@ -60,12 +100,18 @@ jobs:
   # Playwright (tests/e2e). Uploads 390px light/dark screenshots of the week
   # page. Docker Hub pulls go through mirror.gcr.io (see build.yml).
   e2e:
+    needs: changes
+    # Fails safe: on a push (changes skipped) or if changes itself breaks, the
+    # output is empty, not 'false', so the job runs.
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
       - run: npm ci
       - uses: docker/setup-buildx-action@v3
         with:
@@ -85,7 +131,16 @@ jobs:
             -e MCP_API_KEY="$(openssl rand -hex 32)" meal-planner:e2e
           for _ in $(seq 60); do curl -sf http://127.0.0.1:3001/history >/dev/null && exit 0; sleep 1; done
           docker logs meal-planner; exit 1
+      # Cache the browser keyed on the *installed* Playwright version; the apt
+      # system deps are still installed every run (--with-deps).
+      - id: pw
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       - run: npx playwright install --with-deps chromium
+        timeout-minutes: 5 # its apt step has hung for 8+ min elsewhere; fail fast instead
       - run: npm run test:e2e
       - if: always()
         uses: actions/upload-artifact@v4
