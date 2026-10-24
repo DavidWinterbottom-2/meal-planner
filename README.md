@@ -168,7 +168,7 @@ whole `.env` is stored in Bitwarden as **Meal Planner .env**.
 The image is built for `linux/arm64` (the Pi) by
 [`.github/workflows/build.yml`](.github/workflows/build.yml):
 
-- Every PR that touches the image builds it and runs
+- Every PR that touches the image builds it (drafts skip it until marked ready) and runs
   [`scripts/smoke-image.sh`](scripts/smoke-image.sh) on it under QEMU. This
   checks health, auth on `/mcp`, the generic error body, a tool call, the
   non-root user and the `HEALTHCHECK`.
@@ -237,6 +237,10 @@ npm start & npm run test:e2e                   # Playwright against both listene
 `http://127.0.0.1:3001`; `E2E_MCP_URL`, default `http://127.0.0.1:3000`). CI
 runs it against the built image and uploads 390px light and dark screenshots
 of the week page as the `viewer-screenshots` artifact.
+
+CI skips `test` and `e2e` on docs-only and draft PRs, and docs-only PRs need no
+version bump; [`code-changed.sh`](.github/scripts/code-changed.sh) decides what
+counts as docs (see CLAUDE.md).
 
 Work is planned with OpenSpec in [`openspec/`](openspec/).
 

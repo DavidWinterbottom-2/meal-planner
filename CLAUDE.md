@@ -15,7 +15,13 @@ Family meal planner: phone web viewer plus an MCP server so Claude can plan, sav
   - Bug fixes → `bugfix/<description>`
   - Claude, ad-hoc (no skill, no OpenSpec change) → `claude/<description>-<id>`
   - Human work → `<type>/<description>` (`feat`, `chore`, `docs`, …)
-- Every behaviour-changing PR bumps the version in its single source of truth (§2) — `package.json`, via `npm version`.
+- Every PR that changes what ships bumps the version in its single source of truth (§2) — `package.json`, via
+  `npm version`. **Docs-only PRs are exempt**: every changed file is `*.md`, under `docs/`, `openspec/` or
+  `.claude/`, or `LICENSE`, and outside `src/`, `assets/`, `test/`, `tests/`, `scripts/` and `.github/`
+  (those are always code). `.github/scripts/code-changed.sh` is the one definition; keep this list in step.
+- CI minutes: on docs-only and draft PRs the `ci` jobs `test` and `e2e` are skipped (a skipped required
+  check reports as passing) and `build` skips drafts; `version-bumped` and `lint` always run. Marking a
+  draft ready runs everything. A new push cancels the PR's running CI; pushes to `main` are never cancelled.
 - PR descriptions follow **Summary / Changes / Validation** (§3).
 
 ## Testing
